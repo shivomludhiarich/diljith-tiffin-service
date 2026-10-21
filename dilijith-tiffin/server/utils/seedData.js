@@ -5,6 +5,7 @@ import CreditAdjustment from '../models/CreditAdjustment.js';
 import Activity from '../models/Activity.js';
 import { MOCK_USERS } from '../../src/data/mockUsers.js';
 import { createSeed } from '../../src/data/adminSeed.js';
+import { normalizePhone } from '../utils/phone.js';
 
 export async function seedInitialDataIfEmpty() {
   const userCount = await User.countDocuments();
@@ -21,19 +22,20 @@ export async function seedInitialDataIfEmpty() {
     email: 'admin@dilijithtiffin.com',
     password: 'Admin@123',
     role: 'admin',
-    phone: '+919999999999',
+    phone: normalizePhone('+919999999999'),
     status: 'Active',
   });
 
   // 2. Create Customers
   const userMap = {}; // 'u1' -> userDoc
   for (const u of MOCK_USERS) {
+    const rawPhone = u.phone || '9000000000';
     const created = await User.create({
       name: u.name,
       email: u.email,
       password: 'User@123',
       role: 'user',
-      phone: u.phone || '9000000000',
+      phone: normalizePhone(rawPhone),
       status: 'Active',
     });
     userMap[u.id] = created;

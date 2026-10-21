@@ -15,14 +15,17 @@ export default function useSubscriptionActions() {
 
   const request = (type) => (sub) => { opId.current = uid('op'); setPending({ type, sub }); };
 
-  const confirm = () => {
+  const confirm = async () => {
     if (busy || !pending) return;
     setBusy(true);
-    const { type, sub } = pending;
-    const result = type === 'renew' ? renew(sub.id, opId.current) : cancel(sub.id, opId.current);
-    notify(result.ok ? `${sub.id} ${type === 'renew' ? 'renewed' : 'cancelled'}.` : result.errors?.form ?? 'Something went wrong.', result.ok ? 'success' : 'error');
-    setPending(null);
-    setBusy(false);
+    try {
+      const { type, sub } = pending;
+      const result = await (type === 'renew' ? renew(sub.id, opId.current) : cancel(sub.id, opId.current));
+      notify(result.ok ? `${sub.id} ${type === 'renew' ? 'renewed' : 'cancelled'}.` : result.errors?.form ?? 'Something went wrong.', result.ok ? 'success' : 'error');
+      setPending(null);
+    } finally {
+      setBusy(false);
+    }
   };
 
   let dialogs = null;

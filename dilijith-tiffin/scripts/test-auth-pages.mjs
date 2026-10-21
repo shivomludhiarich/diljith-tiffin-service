@@ -49,6 +49,15 @@ async function runAuthTests() {
     // 1. Register with valid details
     console.log('\n[Test 1] Register with valid details');
     const validPhone = '9' + String(Date.now()).slice(-9);
+    const validAddress = {
+      houseOrFlat: 'Flat 402, Block B',
+      street: 'Main Market Road',
+      area: 'Sector 14',
+      city: 'Gurugram',
+      state: 'Haryana',
+      postalCode: '122001',
+      country: 'India',
+    };
     const regRes = await request('/auth/register', {
       method: 'POST',
       body: JSON.stringify({
@@ -57,6 +66,7 @@ async function runAuthTests() {
         password: 'SecretPassword@123',
         confirmPassword: 'SecretPassword@123',
         countryCode: '+91',
+        address: validAddress,
       }),
     });
     assert(regRes.status === 201 && regRes.data.ok, 'User successfully registered with 201 Created');
@@ -80,6 +90,7 @@ async function runAuthTests() {
         phone: '12345',
         password: 'Password@123',
         confirmPassword: 'Password@123',
+        address: validAddress,
       }),
     });
     assert(invalidLenRes.status === 400, 'Rejects short phone number with 400 Bad Request');
@@ -91,6 +102,7 @@ async function runAuthTests() {
         phone: '1234567890', // Indian numbers start with 6,7,8,9
         password: 'Password@123',
         confirmPassword: 'Password@123',
+        address: validAddress,
       }),
     });
     assert(invalidPrefixRes.status === 400, 'Rejects invalid Indian mobile prefix with 400 Bad Request');
@@ -104,6 +116,7 @@ async function runAuthTests() {
         phone: `9${Math.floor(100000000 + Math.random() * 900000000)}`,
         password: 'Password@123',
         confirmPassword: 'DifferentPassword@123',
+        address: validAddress,
       }),
     });
     assert(mismatchRes.status === 400 && mismatchRes.data.field === 'confirmPassword', 'Rejects mismatched passwords');
@@ -117,6 +130,7 @@ async function runAuthTests() {
         phone: validPhone, // Already registered in Test 1
         password: 'Password@123',
         confirmPassword: 'Password@123',
+        address: validAddress,
       }),
     });
     assert(dupRes.status === 409, 'Rejects duplicate phone registration with 409 Conflict');
@@ -159,6 +173,7 @@ async function runAuthTests() {
         password: 'Password@123',
         confirmPassword: 'Password@123',
         role: 'admin', // Malicious attempt to self-promote
+        address: validAddress,
       }),
     });
     if (hackerReg.status !== 201) {

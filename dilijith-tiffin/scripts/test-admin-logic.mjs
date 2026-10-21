@@ -36,7 +36,7 @@ test('dashboard metrics are derived from records', () => {
   assert.deepEqual(m.prep, { breakfast: 1, lunch: 4, dinner: 2 });
   assert.equal(m.mealsToday, 7);
   assert.equal(m.mealsCancelledToday, 2);
-  assert.equal(m.totalUsers, 8);
+  assert.equal(m.totalUsers, 12); // MOCK_USERS has 12 non-admin users
   assert.equal(m.activeSubscriptions, 5);
   assert.equal(m.expiringSoon, 2);
 });

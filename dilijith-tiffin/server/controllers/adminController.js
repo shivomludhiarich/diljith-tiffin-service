@@ -4,6 +4,27 @@ import MealRecord from '../models/MealRecord.js';
 import CreditAdjustment from '../models/CreditAdjustment.js';
 import Activity from '../models/Activity.js';
 import { addDays, endDateFor, todayStr, isValidDateStr } from '../../src/utils/dates.js';
+import { normalizePhone, validatePhone } from '../utils/phone.js';
+
+/** Escape user input before using it in a RegExp to prevent ReDoS. */
+function escapeRegex(str) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Generate a collision-safe subscription code by querying the highest existing
+ * SUB-XXXX code and incrementing it. Using countDocuments() is unsafe because
+ * deleted documents lower the count and concurrent inserts can produce the same value.
+ */
+async function nextSubCode() {
+  const last = await Subscription.findOne({ subCode: /^SUB-\d+$/ })
+    .sort({ subCode: -1 })
+    .select('subCode')
+    .lean();
+  if (!last) return 'SUB-1001';
+  const num = parseInt(last.subCode.replace('SUB-', ''), 10) || 1000;
+  return `SUB-${num + 1}`;
+}
 
 const MEAL_KEYS = ['breakfast', 'lunch', 'dinner'];
 const DURATIONS = [1, 3, 6, 12];
@@ -126,12 +147,13 @@ export async function getUsers(req, res) {
   try {
     const { search } = req.query;
     let query = {};
-    if (search) {
+    if (search && String(search).trim()) {
+      const safe = escapeRegex(String(search).trim());
       query = {
         $or: [
-          { name: { $regex: search, $options: 'i' } },
-          { email: { $regex: search, $options: 'i' } },
-          { phone: { $regex: search, $options: 'i' } },
+          { name: { $regex: safe, $options: 'i' } },
+          { email: { $regex: safe, $options: 'i' } },
+          { phone: { $regex: safe, $options: 'i' } },
         ],
       };
     }
@@ -157,24 +179,47 @@ export async function getUsers(req, res) {
 
 export async function createUser(req, res) {
   try {
-    const { name, email, password = 'User@123', phone, role = 'user' } = req.body;
-    if (!name || !email) {
-      return res.status(400).json({ ok: false, message: 'Name and email are required.' });
+    const { name, email, password = 'User@123', phone, role = 'user', countryCode = '+91' } = req.body;
+    if (!name || !String(name).trim()) {
+      return res.status(400).json({ ok: false, field: 'name', message: 'Name is required.' });
     }
-    const existing = await User.findOne({ email: email.toLowerCase() });
-    if (existing) {
-      return res.status(400).json({ ok: false, message: 'Email already registered.' });
+    if (!email || !String(email).trim()) {
+      return res.status(400).json({ ok: false, field: 'email', message: 'Email is required.' });
     }
+    if (!phone || !String(phone).trim()) {
+      return res.status(400).json({ ok: false, field: 'phone', message: 'Phone number is required.' });
+    }
+    const phoneCheck = validatePhone(phone, countryCode);
+    if (!phoneCheck.valid) {
+      return res.status(400).json({ ok: false, field: 'phone', message: phoneCheck.message });
+    }
+    const normalizedPhone = phoneCheck.normalized;
+
+    const [existingEmail, existingPhone] = await Promise.all([
+      User.findOne({ email: email.toLowerCase() }),
+      User.findOne({ phone: normalizedPhone }),
+    ]);
+    if (existingEmail) {
+      return res.status(409).json({ ok: false, field: 'email', message: 'Email already registered.' });
+    }
+    if (existingPhone) {
+      return res.status(409).json({ ok: false, field: 'phone', message: 'Phone number already registered.' });
+    }
+
     const user = await User.create({
-      name,
-      email: email.toLowerCase(),
+      name: String(name).trim(),
+      email: email.toLowerCase().trim(),
       password,
-      phone: phone || '',
+      phone: normalizedPhone,
       role,
       status: 'Active',
     });
-    res.status(201).json({ ok: true, user });
+    res.status(201).json({ ok: true, user: { _id: user._id, name: user.name, email: user.email, phone: user.phone, role: user.role, status: user.status } });
   } catch (error) {
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyPattern || {})[0] || 'field';
+      return res.status(409).json({ ok: false, field, message: `A user with this ${field} already exists.` });
+    }
     res.status(500).json({ ok: false, message: error.message });
   }
 }
@@ -251,9 +296,8 @@ export async function allocateSubscription(req, res) {
       }
     }
 
-    // Generate unique subscription code
-    const subCount = await Subscription.countDocuments();
-    const subCode = `SUB-${1001 + subCount}`;
+    // Generate collision-safe subscription code
+    const subCode = await nextSubCode();
     const endDate = endDateFor(startDate, months);
 
     const newSub = await Subscription.create({
@@ -323,7 +367,9 @@ export async function adjustCredits(req, res) {
     if (!reason || !reason.trim()) {
       return res.status(400).json({ ok: false, errors: { reason: 'Please give a reason for this change.' } });
     }
+    const trimmedReason = reason.trim();
 
+    // Find subscription first to validate remaining balance
     const sub = await Subscription.findOne({
       $or: [{ _id: id.match(/^[0-9a-fA-F]{24}$/) ? id : null }, { subCode: id }],
     }).populate('user', 'name');
@@ -338,30 +384,33 @@ export async function adjustCredits(req, res) {
       });
     }
 
-    // Atomic update of adjustments
-    sub.approvedAdjustments += num;
-    await sub.save();
+    // Atomic increment — safe under concurrent requests
+    const updated = await Subscription.findByIdAndUpdate(
+      sub._id,
+      { $inc: { approvedAdjustments: num } },
+      { new: true }
+    ).populate('user', 'name');
 
     await CreditAdjustment.create({
-      subscription: sub._id,
-      user: sub.user._id,
+      subscription: updated._id,
+      user: updated.user._id,
       amount: num,
-      reason: reason.trim(),
+      reason: trimmedReason,
     });
 
     await Activity.create({
       type: 'adjusted',
       label: 'Credits adjusted',
-      userId: sub.user._id.toString(),
-      userName: sub.user.name,
-      subscriptionId: sub.subCode || sub._id.toString(),
-      detail: `${num > 0 ? '+' : ''}${num} meals (${sub.subCode || sub._id}). Reason: ${reason.trim()}`,
+      userId: updated.user._id.toString(),
+      userName: updated.user.name,
+      subscriptionId: updated.subCode || updated._id.toString(),
+      detail: `${num > 0 ? '+' : ''}${num} meals (${updated.subCode || updated._id}). Reason: ${trimmedReason}`,
     });
 
     const today = todayStr();
     res.json({
       ok: true,
-      subscription: formatSub(sub, today),
+      subscription: formatSub(updated, today),
       message: 'Credit adjustment saved successfully.',
     });
   } catch (error) {

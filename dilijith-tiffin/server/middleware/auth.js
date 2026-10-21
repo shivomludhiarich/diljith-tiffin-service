@@ -1,7 +1,10 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'dilijith_tiffin_default_fallback_secret_jwt';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  throw new Error('[Auth] JWT_SECRET is not defined. Set it in your .env file before starting the server.');
+}
 
 export function generateToken(user) {
   return jwt.sign(

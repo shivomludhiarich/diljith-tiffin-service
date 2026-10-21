@@ -162,15 +162,18 @@ export async function updateAddress(req, res) {
   }
 }
 
-/** Demo login helper */
+/** Demo login helper — development/staging only. Disabled in production. */
 export async function demoLogin(req, res) {
+  if (process.env.NODE_ENV === 'production') {
+    return res.status(403).json({ ok: false, message: 'Demo login is not available in production.' });
+  }
   try {
     const { role = 'user', email, phone } = req.body;
     let query = {};
-    if (phone)         query = { phone: normalizePhone(phone) };
-    else if (email)    query = { email: email.toLowerCase() };
+    if (phone)              query = { phone: normalizePhone(phone) };
+    else if (email)         query = { email: email.toLowerCase() };
     else if (role === 'admin') query = { role: 'admin' };
-    else               query = { role: 'user' };
+    else                    query = { role: 'user' };
 
     const user = await User.findOne(query);
     if (!user) return res.status(404).json({ ok: false, message: 'Demo account not found.' });

@@ -8,7 +8,7 @@ import { addDays, diffDays, endDateFor, isValidDateStr } from './dates.js';
 import { MEAL_KEYS } from './pricing.js';
 
 export const EXPIRING_DAYS = 7;
-export const DURATIONS = [1, 3, 6];
+export const DURATIONS = [1, 3, 6, 12]; // Must match server/controllers/adminController.js DURATIONS
 export const SUB_STATUS = { ACTIVE: 'Active', EXPIRING: 'Expiring soon', EXPIRED: 'Expired', CANCELLED: 'Cancelled' };
 export const MEAL_STATUS = { SCHEDULED: 'Scheduled', CANCELLED: 'Cancelled', CONSUMED: 'Consumed', MISSED: 'Missed' };
 export const NO_SUB = 'No subscription';

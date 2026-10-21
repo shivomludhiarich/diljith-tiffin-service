@@ -69,13 +69,16 @@ export default function UserDashboard() {
   const opId = useRef(null);
 
   const askCancel = (meal, entry) => { opId.current = uid('op'); setPending({ meal, entry }); };
-  const confirmCancel = () => {
+  const confirmCancel = async () => {
     if (busy || !pending) return;
     setBusy(true);
-    const result = cancelMeal(user.id, pending.entry.id, opId.current);
-    notify(result.ok ? `${mealLabel(pending.meal.mealType)} cancelled. Your credit was kept.` : result.errors?.form ?? 'Could not cancel this meal.', result.ok ? 'success' : 'error');
-    setPending(null);
-    setBusy(false);
+    try {
+      const result = await cancelMeal(user.id, pending.entry.id, opId.current);
+      notify(result.ok ? `${mealLabel(pending.meal.mealType)} cancelled. Your credit was kept.` : result.errors?.form ?? 'Could not cancel this meal.', result.ok ? 'success' : 'error');
+      setPending(null);
+    } finally {
+      setBusy(false);
+    }
   };
 
   const { running, past, stats, mealCredits, nearestExpiry, overallStatus, expiring } = summary;

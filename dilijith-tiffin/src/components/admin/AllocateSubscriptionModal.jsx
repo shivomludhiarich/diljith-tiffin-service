@@ -49,26 +49,34 @@ export default function AllocateSubscriptionModal({ presetUserId = '', onClose }
     setErrors({});
   };
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault();
     if (busy) return;
     setBusy(true);
-    const result = allocate({
-      ...form, allocatedMeals, confirmReplace, demoPrice: plan?.total ?? null, opId: opId.current,
-    });
-    if (result.ok) {
-      notify(`${result.subscription.id} allocated to ${result.user.name}.`);
-      onClose();
-      return;
+    try {
+      const result = await allocate({
+        ...form, allocatedMeals, confirmReplace, demoPrice: plan?.total ?? null, opId: opId.current,
+      });
+      if (result.ok) {
+        const targetUser = customers.find((u) => u.id === form.userId);
+        const userName = targetUser?.name || result.user?.name || 'Customer';
+        const subId = result.subscription?.id || result.subscription?.subCode || 'Subscription';
+        notify(`${subId} allocated to ${userName}.`);
+        onClose();
+        return;
+      }
+      if (result.needsConfirm) {
+        setConflicts(result.conflicts ?? null);
+        setErrors({});
+      } else {
+        setConflicts(null);
+        setErrors(result.errors || {});
+      }
+    } catch (err) {
+      setErrors({ form: err.message || 'Failed to allocate subscription.' });
+    } finally {
+      setBusy(false);
     }
-    if (result.needsConfirm) {
-      setConflicts(result.conflicts ?? null);
-      setErrors({});
-    } else {
-      setConflicts(null);
-      setErrors(result.errors || {});
-    }
-    setBusy(false);
   };
 
   // Derive which selected meal types already have an active subscription (for display)

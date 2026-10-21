@@ -8,8 +8,21 @@ import { errorHandler } from './middleware/errorHandler.js';
 
 const app = express();
 
+// Explicit CORS allowlist. In dev the Vite origin is always allowed.
+// Set ALLOWED_ORIGIN in production .env to your deployed frontend URL.
+const ALLOWED_ORIGINS = new Set([
+  'http://localhost:5173',
+  'http://localhost:4173',
+  'http://localhost:3000',
+  ...(process.env.ALLOWED_ORIGIN ? [process.env.ALLOWED_ORIGIN] : []),
+]);
+
 app.use(cors({
-  origin: true,
+  origin: (origin, cb) => {
+    // Allow requests with no Origin header (curl, Postman, server-to-server)
+    if (!origin || ALLOWED_ORIGINS.has(origin)) return cb(null, true);
+    cb(new Error(`CORS: Origin '${origin}' is not allowed.`));
+  },
   credentials: true,
 }));
 app.use(express.json());

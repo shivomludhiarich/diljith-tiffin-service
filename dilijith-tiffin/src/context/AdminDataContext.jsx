@@ -8,7 +8,7 @@ import {
   adjustCredits, allocateSubscription, cancelSubscription, creditMap, isValidAdminState, renewSubscription,
 } from '../utils/adminLogic';
 import { cancelMeal } from '../utils/userLogic';
-import { api, getToken, setToken } from '../services/api';
+import { api, getToken } from '../services/api';
 
 const KEY = 'dts.admin';
 const AdminDataContext = createContext(null);
@@ -32,17 +32,13 @@ export function AdminDataProvider({ children }) {
 
   // Fetch real state from MongoDB backend
   const refreshFromBackend = useCallback(async () => {
+    const token = getToken();
+    if (!token) {
+      // No JWT — user is not logged in yet. Skip the backend fetch.
+      setIsLiveApi(false);
+      return null;
+    }
     try {
-      // If user is admin but has no token yet, request demo admin token so backend accepts query
-      let token = getToken();
-      if (!token && role === 'admin') {
-        const demoRes = await api.auth.demo('admin').catch(() => null);
-        if (demoRes?.token) {
-          setToken(demoRes.token);
-          token = demoRes.token;
-        }
-      }
-
       const res = await api.admin.getState();
       if (res?.ok && res.state && isValidAdminState(res.state)) {
         latest.current = res.state;
@@ -55,7 +51,7 @@ export function AdminDataProvider({ children }) {
       setIsLiveApi(false);
     }
     return null;
-  }, [role]);
+  }, []);
 
   // Re-fetch whenever role or authenticated user changes
   useEffect(() => {

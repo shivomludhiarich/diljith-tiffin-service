@@ -48,18 +48,24 @@ export default function AdjustCreditsModal({ subscriptionId, onClose }) {
     if (!Object.keys(checked.errors).length) setStep('confirm');
   };
 
-  const apply = () => {
+  const apply = async () => {
     if (busy) return;
     setBusy(true);
-    const result = adjust({ subscriptionId: sub.id, amount, reason, opId: opId.current });
-    if (result.ok) {
-      notify(`${n > 0 ? '+' : ''}${n} meal credits applied to ${sub.id} (${user.name}).`);
-      onClose();
-      return;
+    try {
+      const result = await adjust({ subscriptionId: sub.id, amount, reason, opId: opId.current });
+      if (result.ok) {
+        notify(`${n > 0 ? '+' : ''}${n} meal credits applied to ${sub.id} (${user.name}).`);
+        onClose();
+        return;
+      }
+      setErrors(result.errors || {});
+      setStep('form');
+    } catch (err) {
+      setErrors({ form: err.message || 'Failed to adjust credits.' });
+      setStep('form');
+    } finally {
+      setBusy(false);
     }
-    setErrors(result.errors || {});
-    setStep('form');
-    setBusy(false);
   };
 
   return (
