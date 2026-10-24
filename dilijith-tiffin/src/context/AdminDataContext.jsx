@@ -1,168 +1,56 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { useAppData } from './AppDataContext';
 import { useAuth } from './AuthContext';
-import { createSeed } from '../data/adminSeed';
-import { readJSON, writeJSON } from '../utils/storage';
 import { todayStr } from '../utils/dates';
-import {
-  adjustCredits, allocateSubscription, cancelSubscription, creditMap, isValidAdminState, renewSubscription,
-} from '../utils/adminLogic';
-import { cancelMeal } from '../utils/userLogic';
-import { api, getToken } from '../services/api';
-
-const KEY = 'dts.admin';
+import { api } from '../services/api';
 const AdminDataContext = createContext(null);
-
+const empty = () => ({ users: [], subscriptions: [], mealRecords: [], adjustments: [], activity: [], ledger: [] });
 export function AdminDataProvider({ children }) {
   const { pricing } = useAppData();
   const { user, role } = useAuth();
-  const [state, setState] = useState(() => {
-    const stored = readJSON(KEY, null);
-    return isValidAdminState(stored) ? stored : createSeed();
-  });
-  const [isLiveApi, setIsLiveApi] = useState(false);
-  const latest = useRef(state);
-  const handled = useRef(new Set());
-
-  // Keep latest ref in sync and persist locally
-  useEffect(() => {
-    latest.current = state;
-    writeJSON(KEY, state);
-  }, [state]);
-
-  // Fetch real state from MongoDB backend
+  const [state, setState] = useState(empty);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const generation = useRef(0);
   const refreshFromBackend = useCallback(async () => {
-    const token = getToken();
-    if (!token) {
-      // No JWT — user is not logged in yet. Skip the backend fetch.
-      setIsLiveApi(false);
-      return null;
-    }
+    const current = ++generation.current;
+    if (role !== 'admin') { setState(empty()); setLoading(false); return null; }
+    setLoading(true); setError('');
     try {
       const res = await api.admin.getState();
-      if (res?.ok && res.state && isValidAdminState(res.state)) {
-        latest.current = res.state;
-        setState(res.state);
-        setIsLiveApi(true);
-        return res.state;
-      }
-    } catch {
-      // Backend not running or token not authorized yet
-      setIsLiveApi(false);
-    }
-    return null;
-  }, []);
-
-  // Re-fetch whenever role or authenticated user changes
+      if (!res.ok || !res.state) throw new Error('Could not refresh balances.');
+      if (current === generation.current) setState(res.state);
+      return res.state;
+    } catch (err) {
+      if (current === generation.current) { setState(empty()); setError(err.message); }
+      return null;
+    } finally { if (current === generation.current) setLoading(false); }
+  }, [role, user?.id]);
   useEffect(() => {
     refreshFromBackend();
-  }, [role, user, refreshFromBackend]);
-
-  // Tab synchronization
-  useEffect(() => {
-    const onStorage = (e) => {
-      if (e.key !== KEY || !e.newValue) return;
-      try {
-        const next = JSON.parse(e.newValue);
-        if (isValidAdminState(next)) {
-          latest.current = next;
-          setState(next);
-        }
-      } catch {
-        /* ignore */
-      }
-    };
-    window.addEventListener('storage', onStorage);
-    return () => window.removeEventListener('storage', onStorage);
-  }, []);
-
-  const daysForMonths = useCallback(
-    (months) => pricing.durations.find((d) => d.months === months)?.days ?? months * 30,
-    [pricing]
-  );
-
-  // Command runner: attempts backend API call first, then updates local state
-  const run = useCallback(async (command, input, opId) => {
-    if (opId && handled.current.has(opId)) {
-      return { ok: false, duplicate: true, errors: { form: 'This request was already submitted.' } };
-    }
-
-    // 1. Try backend API operation
+    return () => { generation.current++; };
+  }, [refreshFromBackend]);
+  const run = async (fn) => {
     try {
-      if (command === allocateSubscription) {
-        const res = await api.admin.allocate(input);
-        if (!res.ok) return res;
-        await refreshFromBackend();
-        if (opId) handled.current.add(opId);
-        return { ok: true, state: latest.current, subscription: res.subscription };
-      } else if (command === adjustCredits) {
-        const res = await api.admin.adjust(input.subscriptionId, input);
-        if (!res.ok) return res;
-        await refreshFromBackend();
-        if (opId) handled.current.add(opId);
-        return { ok: true, state: latest.current, subscription: res.subscription };
-      } else if (command === renewSubscription) {
-        const res = await api.admin.renew(input);
-        if (!res.ok) return res;
-        await refreshFromBackend();
-        if (opId) handled.current.add(opId);
-        return { ok: true, state: latest.current, subscription: res.subscription };
-      } else if (command === cancelSubscription) {
-        const res = await api.admin.cancel(input);
-        if (!res.ok) return res;
-        await refreshFromBackend();
-        if (opId) handled.current.add(opId);
-        return { ok: true, state: latest.current, subscription: res.subscription };
-      } else if (command === cancelMeal) {
-        const res = await api.user.cancelMeal(input.recordId);
-        if (!res.ok) return res;
-        await refreshFromBackend();
-        if (opId) handled.current.add(opId);
-        return { ok: true, state: latest.current };
-      }
-    } catch (err) {
-      if (err.data && err.data.errors) {
-        return { ok: false, errors: err.data.errors, needsConfirm: err.data.needsConfirm, conflicts: err.data.conflicts };
-      }
-      if (err.data && err.data.message) {
-        return { ok: false, errors: { form: err.data.message } };
-      }
-    }
-
-    // Fallback: Pure local execution
-    const result = command(latest.current, input, { today: todayStr(), nowIso: new Date().toISOString(), daysForMonths });
-    if (result.ok) {
-      latest.current = result.state;
-      setState(result.state);
-      if (opId) handled.current.add(opId);
-    }
-    return result;
-  }, [daysForMonths, refreshFromBackend]);
-
-  const value = useMemo(() => ({
-    ...state,
-    state,
-    today: todayStr(),
-    credits: creditMap(state),
-    daysForMonths,
-    isLiveApi,
+      const res = await fn();
+      if (!res.ok) return res;
+      const updated = await refreshFromBackend();
+      if (!updated) return { ok: false, errors: { form: 'Operation saved, but balances could not be refreshed. Reload to verify.' } };
+      return res;
+    } catch (err) { return { ok: false, errors: err.data?.errors || { form: err.message }, ...err.data }; }
+  };
+  const value = {
+    ...state, state, loading, error, today: todayStr(), isLiveApi: !loading && !error,
+    credits: Object.fromEntries(state.subscriptions.map(s => [s.id, s.credit ?? { allocated: null, consumed: null, adjustments: null, entitlement: null, remaining: null }])),
+    daysForMonths: months => pricing.durations.find(d => d.months === months)?.days ?? months * 30,
     refreshFromBackend,
-    allocate: (input) => run(allocateSubscription, input, input.opId),
-    adjust: (input) => run(adjustCredits, input, input.opId),
-    renew: (subId, opId) => run(renewSubscription, subId, opId),
-    cancel: (subId, opId) => run(cancelSubscription, subId, opId),
-    cancelMeal: (userId, recordId, opId) => run(cancelMeal, { userId, recordId }, opId),
-    reset: () => {
-      const seed = createSeed();
-      latest.current = seed;
-      handled.current.clear();
-      setState(seed);
-    },
-  }), [state, run, daysForMonths, isLiveApi, refreshFromBackend]);
-
+    allocate: input => run(() => api.admin.allocate(input)),
+    adjust: input => run(() => api.admin.adjust(input.subscriptionId, { ...input, amount: Number(input.amount) })),
+    renew: (id, opId) => run(() => api.admin.renew(id, opId)),
+    cancel: (id, opId) => run(() => api.admin.cancel(id, opId)),
+  };
   return <AdminDataContext.Provider value={value}>{children}</AdminDataContext.Provider>;
 }
-
 export const useAdminData = () => {
   const ctx = useContext(AdminDataContext);
   if (!ctx) throw new Error('useAdminData must be used inside <AdminDataProvider>');

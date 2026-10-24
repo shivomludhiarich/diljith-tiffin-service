@@ -2,6 +2,8 @@ import mongoose from 'mongoose';
 
 const mealRecordSchema = new mongoose.Schema(
   {
+    accountingVersion: Number,
+    servingKey: String,
     recordCode: {
       type: String,
       unique: true,
@@ -59,7 +61,13 @@ const mealRecordSchema = new mongoose.Schema(
   }
 );
 
+mealRecordSchema.pre('validate', function () {
+  if (this.accountingVersion === 2) this.servingKey = this.status === 'Cancelled' ? undefined : `${this.user}:${this.date}:${this.mealType}`;
+});
+
 // Prevent accidental duplicate meal schedule for the same subscription, date, and meal type
 mealRecordSchema.index({ subscription: 1, date: 1, mealType: 1 }, { unique: true });
+
+mealRecordSchema.index({ servingKey: 1 }, { unique: true, partialFilterExpression: { servingKey: { $type: 'string' } } });
 
 export default mongoose.models.MealRecord || mongoose.model('MealRecord', mealRecordSchema);

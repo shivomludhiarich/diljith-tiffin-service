@@ -1,6 +1,8 @@
 import User from '../models/User.js';
 import { generateToken } from '../middleware/auth.js';
 import { normalizePhone, validatePhone } from '../utils/phone.js';
+import { normalizeEmail, validEmail, passwordError } from '../../src/utils/authValidation.js';
+
 
 // ---------------------------------------------------------------------------
 // Address helpers
@@ -66,12 +68,15 @@ export async function register(req, res) {
       return res.status(400).json({ ok: false, field: 'phone', message: phoneCheck.message });
     const normalizedPhone = phoneCheck.normalized;
 
-    if (!password)
+    if (typeof password !== 'string')
       return res.status(400).json({ ok: false, field: 'password', message: 'Password is required.' });
     if (password.length < 6)
       return res.status(400).json({ ok: false, field: 'password', message: 'Password must be at least 6 characters.' });
     if (confirmPassword !== undefined && password !== confirmPassword)
       return res.status(400).json({ ok: false, field: 'confirmPassword', message: 'Passwords do not match.' });
+
+    const policyError = passwordError(password, confirmPassword ?? password);
+    if (policyError) return res.status(400).json({ ok: false, field: 'password', message: policyError });
 
     // --- Address validation (server-side, never trust client alone) ---
     const { address, errors: addrErrors } = normalizeAddress(rawAddress);
@@ -85,11 +90,15 @@ export async function register(req, res) {
     if (existing)
       return res.status(409).json({ ok: false, field: 'phone', message: 'An account with this phone number already exists.' });
 
+    const normalizedEmail = normalizeEmail(email);
+    if (normalizedEmail && !validEmail(normalizedEmail)) return res.status(400).json({ ok: false, field: 'email', message: 'Enter a valid email address.' });
+    if (normalizedEmail && await User.exists({ email: normalizedEmail })) return res.status(409).json({ ok: false, field: 'email', message: 'An account with this email already exists.' });
+
     // --- Create user (role always 'user', never trusted from request body) ---
     const user = await User.create({
       name: name.trim(),
       phone: normalizedPhone,
-      ...(email && String(email).trim() ? { email: String(email).trim().toLowerCase() } : {}),
+      ...(normalizedEmail ? { email: normalizedEmail } : {}),
       password,
       role: 'user',
       status: 'Active',
@@ -99,8 +108,9 @@ export async function register(req, res) {
     const token = generateToken(user);
     res.status(201).json({ ok: true, token, user: serializeUser(user), message: 'Account created successfully!' });
   } catch (error) {
+    if (error.status) return res.status(error.status).json({ ok: false, field: error.field, message: error.message });
     if (error.code === 11000)
-      return res.status(409).json({ ok: false, field: 'phone', message: 'An account with this phone number already exists.' });
+      return res.status(409).json({ ok: false, field: error.keyPattern?.email ? 'email' : 'phone', message: 'An account with these details already exists.' });
     res.status(500).json({ ok: false, message: error.message || 'Registration failed.' });
   }
 }
@@ -162,25 +172,3 @@ export async function updateAddress(req, res) {
   }
 }
 
-/** Demo login helper — development/staging only. Disabled in production. */
-export async function demoLogin(req, res) {
-  if (process.env.NODE_ENV === 'production') {
-    return res.status(403).json({ ok: false, message: 'Demo login is not available in production.' });
-  }
-  try {
-    const { role = 'user', email, phone } = req.body;
-    let query = {};
-    if (phone)              query = { phone: normalizePhone(phone) };
-    else if (email)         query = { email: email.toLowerCase() };
-    else if (role === 'admin') query = { role: 'admin' };
-    else                    query = { role: 'user' };
-
-    const user = await User.findOne(query);
-    if (!user) return res.status(404).json({ ok: false, message: 'Demo account not found.' });
-
-    const token = generateToken(user);
-    res.json({ ok: true, token, user: serializeUser(user) });
-  } catch (error) {
-    res.status(500).json({ ok: false, message: error.message });
-  }
-}

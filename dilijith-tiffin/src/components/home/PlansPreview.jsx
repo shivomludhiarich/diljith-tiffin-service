@@ -1,4 +1,5 @@
-import { Link } from 'react-router-dom';
+import { MessageCircle } from 'lucide-react';
+import { WHATSAPP_URL } from '../../config/brand';
 import SectionHeading from '../common/SectionHeading';
 import MealPricingCard from '../pricing/MealPricingCard';
 import { useAppData } from '../../context/AppDataContext';
@@ -8,7 +9,7 @@ export default function PlansPreview() {
   const { mealRates = MEAL_RATES } = useAppData();
 
   return (
-    <section className="section" id="rates">
+    <section className="section scroll-mt-24" id="rates">
       <div className="container-x">
         <SectionHeading
           title="Our Meal Rates"
@@ -19,14 +20,19 @@ export default function PlansPreview() {
             <MealPricingCard key={rate.id} rate={rate} />
           ))}
         </div>
-        <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
-          <Link
-            to="/plans"
-            className="inline-flex items-center gap-2 rounded-full border border-line bg-bg2 px-6 py-3 text-sm font-bold text-ink transition-colors hover:border-brand hover:bg-white"
-          >
-            <span>View All Rate Details &amp; Policies</span>
-            <span aria-hidden="true">&rarr;</span>
-          </Link>
+        <div className="mt-10 rounded-3xl border border-line bg-gradient-to-br from-bg2 to-white p-8 sm:p-10">
+          <div className="flex flex-col items-start justify-between gap-6 md:flex-row md:items-center">
+            <div>
+              <h2 className="text-2xl font-bold sm:text-3xl">Order &amp; Enquire Directly on WhatsApp</h2>
+              <p className="mt-2 max-w-xl text-muted">Subscriptions, renewals, and daily preferences are coordinated directly on WhatsApp for seamless, personal service.</p>
+            </div>
+            <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer"
+              className="inline-flex h-12 shrink-0 items-center gap-2 rounded-full bg-brand px-6 text-sm font-bold text-white shadow-md transition-all hover:bg-brand/90 hover:shadow-lg"
+              aria-label="Chat with Dilijith Tiffin Service on WhatsApp (opens in new tab)">
+              <MessageCircle className="h-5 w-5" aria-hidden="true" />
+              <span>Message Us on WhatsApp</span>
+            </a>
+          </div>
         </div>
       </div>
     </section>

@@ -10,7 +10,7 @@ import { BRAND } from '../config/brand';
 export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { isAuthenticated, role, loginWithCredentials, login, loading: authLoading } = useAuth();
+  const { isAuthenticated, role, loginWithCredentials, loading: authLoading } = useAuth();
   const { notify } = useToast();
 
   const [countryCode, setCountryCode] = useState('+91');
@@ -90,26 +90,6 @@ export default function Login() {
     } catch (err) {
       setGeneralError(err.message || 'An unexpected error occurred. Please try again.');
       notify(err.message || 'Login failed.', 'error');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  // Quick 1-click switcher for development/testing convenience
-  const handleDemoLogin = async (demoRole) => {
-    setSubmitting(true);
-    try {
-      if (demoRole === 'admin') {
-        await login({ id: 'a1', name: 'Dilijith Admin', email: 'admin@dilijithtiffin.com', phone: '+919999999999', role: 'admin' });
-        notify('Logged in as Dilijith Admin', 'info');
-        navigate('/admin/dashboard', { replace: true });
-      } else {
-        await login({ id: 'u1', name: 'Shivom Ludhiarich', phone: '+916230730355', role: 'user' });
-        notify('Logged in as Shivom Ludhiarich', 'info');
-        navigate('/user/dashboard', { replace: true });
-      }
-    } catch {
-      notify('Quick login failed.', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -227,6 +207,7 @@ export default function Login() {
             </div>
 
             {/* Submit Button */}
+            <Link to="/forgot-password" className="block text-right text-sm font-bold text-brand hover:underline">Forgot password?</Link>
             <button
               type="submit"
               disabled={submitting || authLoading}
@@ -257,30 +238,7 @@ export default function Login() {
             </Link>
           </div>
 
-          {/* Quick Demo Switcher (Helpful for pairs/testers) */}
-          <div className="mt-8 border-t border-line pt-6">
-            <p className="text-center text-xs font-semibold uppercase tracking-wider text-muted">
-              Demo Test Logins
-            </p>
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => handleDemoLogin('user')}
-                disabled={submitting}
-                className="rounded-lg border border-line bg-surface/50 px-3 py-2 text-xs font-bold text-ink hover:bg-surface hover:border-brand/40"
-              >
-                Demo Customer
-              </button>
-              <button
-                type="button"
-                onClick={() => handleDemoLogin('admin')}
-                disabled={submitting}
-                className="rounded-lg border border-line bg-surface/50 px-3 py-2 text-xs font-bold text-ink hover:bg-surface hover:border-brand/40"
-              >
-                Demo Admin
-              </button>
-            </div>
-          </div>
+
         </div>
       </div>
     </div>

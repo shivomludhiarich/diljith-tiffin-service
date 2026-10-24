@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { totals, syncTotals } from '../services/credits.js';
 
 const renewalSchema = new mongoose.Schema(
   {
@@ -11,8 +12,18 @@ const renewalSchema = new mongoose.Schema(
   { _id: false }
 );
 
+const mealCreditDetailSchema = new mongoose.Schema(
+  {
+    allocated: { type: Number, default: 0, min: 0 },
+    consumed: { type: Number, default: 0, min: 0 },
+    adjustments: { type: Number, default: 0 },
+  },
+  { _id: false }
+);
+
 const subscriptionSchema = new mongoose.Schema(
   {
+    accountingVersion: { type: Number },
     subCode: {
       type: String,
       unique: true,
@@ -52,7 +63,7 @@ const subscriptionSchema = new mongoose.Schema(
     allocatedMeals: {
       type: Number,
       required: true,
-      min: [1, 'Allocated meals must be at least 1'],
+      min: [0, 'Allocated meals cannot be negative'],
     },
     consumedMeals: {
       type: Number,
@@ -62,6 +73,11 @@ const subscriptionSchema = new mongoose.Schema(
     approvedAdjustments: {
       type: Number,
       default: 0,
+    },
+    mealCredits: {
+      breakfast: { type: mealCreditDetailSchema, default: null },
+      lunch: { type: mealCreditDetailSchema, default: null },
+      dinner: { type: mealCreditDetailSchema, default: null },
     },
     status: {
       type: String,
@@ -95,7 +111,11 @@ const subscriptionSchema = new mongoose.Schema(
 );
 
 subscriptionSchema.virtual('remainingCredits').get(function () {
-  return this.allocatedMeals - this.consumedMeals + this.approvedAdjustments;
+  return totals(this)?.remaining ?? null;
 });
 
+// Never infer meal allocations from a legacy shared total.
+subscriptionSchema.pre('validate', function () {
+  if (this.accountingVersion === 2) syncTotals(this);
+});
 export default mongoose.models.Subscription || mongoose.model('Subscription', subscriptionSchema);

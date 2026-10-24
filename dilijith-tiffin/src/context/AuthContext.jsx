@@ -65,27 +65,6 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  // Demo user switcher / standard login helper
-  const login = useCallback(async (nextUser) => {
-    setUser(nextUser);
-    writeJSON(KEYS.auth, nextUser);
-
-    // Also acquire a real JWT token in the background so backend requests succeed with real auth
-    try {
-      const res = await api.auth.demo(nextUser?.role || 'user', nextUser?.email);
-      if (res?.token) {
-        setToken(res.token);
-        if (res.user) {
-          const merged = { ...nextUser, ...res.user, id: res.user.id || nextUser.id };
-          setUser(merged);
-          writeJSON(KEYS.auth, merged);
-        }
-      }
-    } catch {
-      // Offline fallback: demo credentials remain in localStorage
-    }
-  }, []);
-
   const logout = useCallback(() => {
     setUser(null);
     setToken(null);
@@ -107,13 +86,12 @@ export function AuthProvider({ children }) {
       isAuthenticated: !!user,
       role: user?.role ?? null,
       loading,
-      login,
       loginWithCredentials,
       registerWithCredentials,
       logout,
       updateUser,
     }),
-    [user, loading, login, loginWithCredentials, registerWithCredentials, logout, updateUser]
+    [user, loading, loginWithCredentials, registerWithCredentials, logout, updateUser]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -9,7 +9,7 @@ import { useAuth } from '../../context/AuthContext';
 const LINKS = [
   { label: 'Home', to: '/', end: true },
   { label: 'How It Works', to: '/#how-it-works', hash: true },
-  { label: 'Rates & Pricing', to: '/plans' },
+  { label: 'Meal Plans', to: '/#rates', hash: true },
   { label: 'FAQ', to: '/#faq', hash: true },
   { label: 'Contact', href: WHATSAPP_URL },
 ];

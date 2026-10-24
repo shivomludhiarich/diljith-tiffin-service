@@ -34,7 +34,8 @@ export default function SubscriptionDetailsDrawer({ subId, onClose, onOpenUser, 
         {sub.cancelledAt && <Field label="Cancelled">{formatDateTime(sub.cancelledAt)}{sub.cancelReason ? ` · ${sub.cancelReason}` : ''}</Field>}
       </dl>
 
-      <Section title="Meal credits"><CreditBreakdown credit={credit} /></Section>
+      <Section title="Meal credits">{sub.requiresCreditReview ? <p role="alert">Original allocations require review.</p> : sub.mealTypes.map(t => <div key={t}><h3>{t}</h3><CreditBreakdown credit={sub.balances[t]} /></div>)}</Section>
+      <Section title="Credit ledger"><ul>{(state.ledger || []).filter(e => String(e.subscription) === sub._id).map(e => <li key={e._id} className="py-2 text-sm">{formatDateTime(e.createdAt)} ? {e.mealType} ? {e.operation} ? {e.delta > 0 ? '+' : ''}{e.delta}{e.reason ? ` ? ${e.reason}` : ''}</li>)}</ul></Section>
       <Section title="Credit adjustments"><AdjustmentList adjustments={state.adjustments.filter((a) => a.subscriptionId === sub.id)} /></Section>
 
       {sub.renewals?.length > 0 && (

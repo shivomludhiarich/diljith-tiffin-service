@@ -1,10 +1,10 @@
+import { balances, totals } from '../services/credits.js';
+export { cancelUserMeal } from './creditController.js';
 import Subscription from '../models/Subscription.js';
 import MealRecord from '../models/MealRecord.js';
-import Activity from '../models/Activity.js';
 import { deriveSubStatus, isLiveStatus } from './adminController.js';
 import { cutoffFor } from '../../src/utils/userLogic.js';
-import { todayStr, formatDate } from '../../src/utils/dates.js';
-import { mealLabel } from '../../src/utils/adminLogic.js';
+import { todayStr } from '../../src/utils/dates.js';
 
 const MEAL_KEYS = ['breakfast', 'lunch', 'dinner'];
 
@@ -20,8 +20,8 @@ export async function getUserDashboard(req, res) {
 
     const all = subs.map((s) => {
       const status = deriveSubStatus(s, today);
-      const remaining = s.allocatedMeals - s.consumedMeals + s.approvedAdjustments;
-      const entitlement = s.allocatedMeals + s.approvedAdjustments;
+      const credit = totals(s);
+      const entitlement = credit?.entitlement ?? 0;
       return {
         sub: {
           id: s.subCode || s._id.toString(),
@@ -34,21 +34,21 @@ export async function getUserDashboard(req, res) {
           consumedMeals: s.consumedMeals,
           approvedAdjustments: s.approvedAdjustments,
           demoPrice: s.demoPrice,
+          mealCredits: balances(s),
+          requiresCreditReview: !credit,
         },
         status,
-        credit: {
-          allocated: s.allocatedMeals,
-          consumed: s.consumedMeals,
-          adjustments: s.approvedAdjustments,
-          entitlement,
-          remaining: Math.max(0, remaining),
-        },
-        percentUsed: entitlement > 0 ? Math.min(100, Math.round((s.consumedMeals / entitlement) * 100)) : 0,
+        credit: credit ?? { allocated: null, consumed: null, adjustments: null, entitlement: null, remaining: null },
+        percentUsed: entitlement > 0 ? Math.min(100, Math.round((credit.consumed / entitlement) * 100)) : 0,
       };
     });
 
     const running = all.filter((x) => isLiveStatus(x.status));
     const past = all.filter((x) => !isLiveStatus(x.status));
+
+    // Total running subscription IDs
+    const runningSubIds = new Set(running.map((x) => x.sub._id));
+    const runningRecords = records.filter((m) => runningSubIds.has(m.subscription.toString()));
 
     // Independent Per-Meal-Type breakdown
     const mealCredits = { breakfast: null, lunch: null, dinner: null };
@@ -56,11 +56,20 @@ export async function getUserDashboard(req, res) {
       const covering = running.filter((x) => x.sub.mealTypes.includes(mealType));
       if (!covering.length) continue;
 
+      if (covering.some(x => x.sub.requiresCreditReview)) {
+        mealCredits[mealType] = { requiresReview: true };
+        continue;
+      }
       let allocated = 0, consumed = 0, adjustments = 0;
       for (const item of covering) {
-        allocated += item.credit.allocated;
-        consumed += item.credit.consumed;
-        adjustments += item.credit.adjustments;
+        const s = subs.find((sub) => sub._id.toString() === item.sub._id.toString());
+        const cred = balances(s)?.[mealType];
+        if (!cred) continue;
+        const subAlloc = cred.allocated, subAdj = cred.adjustments, subCons = cred.consumed;
+
+        allocated += subAlloc;
+        consumed += subCons;
+        adjustments += subAdj;
       }
       mealCredits[mealType] = {
         allocated,
@@ -77,13 +86,9 @@ export async function getUserDashboard(req, res) {
     let overallStatus = 'No subscription';
     if (running.length) overallStatus = expiring.length ? 'Expiring soon' : 'Active';
 
-    // Total running subscription IDs
-    const runningSubIds = new Set(running.map((x) => x.sub._id));
-    const runningRecords = records.filter((m) => runningSubIds.has(m.subscription.toString()));
-
     const stats = {
-      remaining: running.reduce((sum, x) => sum + x.credit.remaining, 0),
-      consumed: runningRecords.filter((m) => m.status === 'Consumed').length,
+      remaining: running.some(x => x.sub.requiresCreditReview) ? null : running.reduce((sum, x) => sum + x.credit.remaining, 0),
+      consumed: running.some(x => x.sub.requiresCreditReview) ? null : running.reduce((sum, x) => sum + x.credit.consumed, 0),
       cancelled: runningRecords.filter((m) => m.status === 'Cancelled' && m.cancelledBy !== 'subscription').length,
       activeSubscriptions: running.length,
       breakdownByMeal: mealCredits,
@@ -137,7 +142,7 @@ export async function getTodaysMeals(req, res) {
           subscriptionId: m.subscription.toString(),
           status: m.status,
           cancelledAt: m.cancelledAt ? m.cancelledAt.toISOString() : null,
-          cancellable: m.status === 'Scheduled' && now <= cutoff,
+          cancellable: m.status === 'Scheduled' && now < cutoff,
         }));
 
       return {
@@ -178,76 +183,6 @@ export async function getRecentMealActivity(req, res) {
         cancelledAt: m.cancelledAt,
         cancelledBy: m.cancelledBy,
       })),
-    });
-  } catch (error) {
-    res.status(500).json({ ok: false, message: error.message });
-  }
-}
-
-export async function cancelUserMeal(req, res) {
-  try {
-    const userId = req.user._id;
-    const { id } = req.params;
-    const today = todayStr();
-    const now = new Date();
-
-    const record = await MealRecord.findOne({
-      $or: [{ _id: id.match(/^[0-9a-fA-F]{24}$/) ? id : null }, { recordCode: id }],
-    });
-
-    if (!record || record.user.toString() !== userId.toString()) {
-      return res.status(404).json({ ok: false, message: 'Meal record not found.' });
-    }
-
-    if (record.status === 'Cancelled') {
-      return res.status(400).json({ ok: false, message: 'This meal is already cancelled.' });
-    }
-
-    if (record.status !== 'Scheduled') {
-      return res.status(400).json({ ok: false, message: `A ${record.status.toLowerCase()} meal cannot be cancelled.` });
-    }
-
-    const sub = await Subscription.findById(record.subscription);
-    if (!sub || sub.status === 'Cancelled' || sub.endDate < today) {
-      return res.status(400).json({ ok: false, message: 'This meal belongs to a subscription that is no longer active.' });
-    }
-
-    const cutoff = cutoffFor(record.date, record.mealType);
-    if (now > cutoff) {
-      const deadlineStr = cutoff.toLocaleString('en-IN', {
-        day: '2-digit',
-        month: 'short',
-        hour: 'numeric',
-        minute: '2-digit',
-      });
-      return res.status(400).json({
-        ok: false,
-        message: `The cancellation deadline for this meal passed on ${deadlineStr}.`,
-      });
-    }
-
-    record.status = 'Cancelled';
-    record.cancelledAt = now;
-    record.cancelledBy = 'user';
-    await record.save();
-
-    await Activity.create({
-      type: 'meal_cancelled',
-      label: 'Meal cancelled',
-      userId: userId.toString(),
-      userName: req.user.name,
-      subscriptionId: sub.subCode || sub._id.toString(),
-      detail: `${mealLabel(record.mealType)} on ${formatDate(record.date)} (${sub.subCode || sub._id}), cancelled by the customer`,
-    });
-
-    res.json({
-      ok: true,
-      record: {
-        id: record.recordCode || record._id.toString(),
-        status: record.status,
-        cancelledAt: record.cancelledAt,
-      },
-      message: 'Meal cancelled successfully. Credit preserved.',
     });
   } catch (error) {
     res.status(500).json({ ok: false, message: error.message });

@@ -6,7 +6,7 @@
 export const MEAL_POLICY = {
   cancellation: {
     breakfast: { dayOffset: -1, time: '21:00' }, // 9:00 PM the evening before
-    lunch: { dayOffset: 0, time: '09:00' },      // 9:00 AM on the day
-    dinner: { dayOffset: 0, time: '15:00' },     // 3:00 PM on the day
+    lunch: { dayOffset: 0, time: '10:00' },      // 10:00 AM on the day
+    dinner: { dayOffset: 0, time: '19:00' },     // 7:00 PM on the day
   },
 };

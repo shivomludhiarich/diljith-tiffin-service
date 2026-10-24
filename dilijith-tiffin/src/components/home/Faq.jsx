@@ -25,7 +25,7 @@ const FAQS = [
   },
   {
     q: 'How do I start a meal plan or place an order?',
-    a: 'Click "Enquire on WhatsApp" on any meal option or reach out via our contact number. Subscriptions and daily delivery details are coordinated seamlessly through WhatsApp.',
+    a: 'Click "Message Us on WhatsApp" below the meal plans or reach out via our contact number. Subscriptions and daily delivery details are coordinated seamlessly through WhatsApp.',
   },
 ];
 

@@ -5,14 +5,14 @@ import Footer from '../components/layout/Footer';
 
 // Makes /#faq style links scroll, and resets scroll on normal route changes.
 function ScrollManager() {
-  const { pathname, hash } = useLocation();
+  const { pathname, hash, key } = useLocation();
   useEffect(() => {
     if (hash) {
       const el = document.getElementById(hash.slice(1));
-      if (el) { el.scrollIntoView(); return; }
+      if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
     }
     window.scrollTo(0, 0);
-  }, [pathname, hash]);
+  }, [pathname, hash, key]);
   return null;
 }
 

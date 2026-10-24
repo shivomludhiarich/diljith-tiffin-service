@@ -14,7 +14,7 @@ import { NO_SUB, durationLabel, mealsLabel, userRows } from '../../utils/adminLo
 const STATUS_OPTIONS = ['All statuses', 'Active', 'Expiring soon', 'Expired', 'Cancelled', NO_SUB, 'Missing address'];
 
 export default function AdminUsers() {
-  const { state, today, credits, refreshFromBackend } = useAdminData();
+  const { state, today, credits } = useAdminData();
   const [searchParams, setSearchParams] = useSearchParams();
   const [query, setQuery] = useState('');
   
@@ -28,10 +28,6 @@ export default function AdminUsers() {
       setStatus('Missing address');
     }
   }, [searchParams]);
-
-  useState(() => {
-    if (refreshFromBackend) refreshFromBackend();
-  });
 
   const all = useMemo(() => userRows(state, today, credits), [state, today, credits]);
   const rows = useMemo(() => {
@@ -70,7 +66,7 @@ export default function AdminUsers() {
     { key: 'phone', label: 'Phone', render: (r) => r.user.phone || '-' },
     { key: 'plan', label: 'Subscription plan', render: (r) => (r.sub ? `${durationLabel(r.sub.durationMonths)} (${r.sub.id})` : '-') },
     { key: 'meals', label: 'Active meal types', render: (r) => (r.sub ? mealsLabel(r.sub.mealTypes) : '-') },
-    { key: 'remaining', label: 'Meals remaining', render: (r) => (r.credits ? <span className="font-bold">{r.credits.remaining}</span> : '-') },
+    { key: 'remaining', label: 'Meals remaining', render: (r) => (r.credits ? <span className="font-bold">{r.credits.remaining ?? "Review required"}</span> : '-') },
     { key: 'status', label: 'Status', render: (r) => <StatusBadge status={r.status} /> },
     { key: 'address', label: 'Address', render: (r) => (
       r.user.hasAddress

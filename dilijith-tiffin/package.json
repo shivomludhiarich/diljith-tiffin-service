@@ -11,9 +11,13 @@
     "test:admin": "node scripts/test-admin-logic.mjs",
     "test:user": "node scripts/test-user-logic.mjs",
     "test:allocation": "node scripts/test-meal-allocation.mjs",
-    "test:integration": "node scripts/test-mongodb-integration.mjs",
-    "test:auth": "node scripts/test-auth-pages.mjs",
-    "test": "npm run test:admin && npm run test:user && npm run test:allocation && npm run test:auth"
+    "test:integration": "node scripts/run-database-tests.mjs test-mongodb-integration.mjs",
+    "test:auth": "node scripts/run-database-tests.mjs test-auth-pages.mjs",
+    "test": "npm run test:admin && npm run test:user && npm run test:allocation && npm run test:credits && npm run test:credit-ui && npm run test:credit-api && npm run test:database",
+    "test:credits": "node scripts/test-credit-accounting.mjs",
+    "test:credit-api": "node scripts/test-credit-api.mjs",
+    "test:database": "node scripts/run-database-tests.mjs",
+    "test:credit-ui": "node scripts/test-credit-ui.mjs"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
@@ -30,8 +34,14 @@
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.1",
     "autoprefixer": "^10.4.20",
+    "mongodb-memory-server": "^11.3.0",
     "postcss": "^8.4.47",
     "tailwindcss": "^3.4.13",
     "vite": "^5.4.8"
+  },
+  "config": {
+    "mongodbMemoryServer": {
+      "downloadDir": "./node_modules/.cache/mongodb"
+    }
   }
 }

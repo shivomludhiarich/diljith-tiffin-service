@@ -1,7 +1,5 @@
-import { Check, MessageCircle } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { formatINR } from '../../utils/pricing';
-import { buildMealWhatsappUrl } from '../../utils/whatsapp';
-import { BRAND } from '../../config/brand';
 
 const STYLE = {
   black: {
@@ -9,7 +7,6 @@ const STYLE = {
     sub: 'text-white/80',
     divider: 'border-white/15',
     check: 'text-white',
-    btn: 'border border-white/40 text-white hover:border-white hover:bg-white/10',
     badge: 'bg-white text-ink',
   },
   green: {
@@ -17,7 +14,6 @@ const STYLE = {
     sub: 'text-white/90',
     divider: 'border-white/20',
     check: 'text-white',
-    btn: 'bg-white text-brand hover:bg-bg2 shadow-md',
     badge: 'bg-white text-brand',
   },
   orange: {
@@ -25,7 +21,6 @@ const STYLE = {
     sub: 'text-white/95',
     divider: 'border-white/20',
     check: 'text-white',
-    btn: 'bg-white text-[#E27800] hover:bg-bg2 shadow-md',
     badge: 'bg-white text-[#E27800]',
   },
   light: {
@@ -33,20 +28,17 @@ const STYLE = {
     sub: 'text-muted',
     divider: 'border-line',
     check: 'text-brand',
-    btn: 'bg-ink text-white hover:bg-black shadow-md hover:shadow-lg',
     badge: 'bg-bg2 text-ink',
   },
 };
 
-const BTN = 'inline-flex h-12 w-full items-center justify-center gap-2 rounded-full px-5 text-sm font-bold transition-all';
 
 export default function MealPricingCard({ rate, selected, onSelect }) {
   const s = STYLE[rate.tone] ?? STYLE.black;
-  const whatsappUrl = buildMealWhatsappUrl(rate.title, rate.price, BRAND.whatsappNumber);
 
   return (
     <div
-      className={`relative flex min-h-[29rem] flex-col rounded-3xl p-7 transition-transform hover:-translate-y-1 ${s.card} ${
+      className={`relative flex min-h-[24rem] flex-col rounded-3xl p-7 transition-transform hover:-translate-y-1 ${s.card} ${
         selected ? 'ring-2 ring-ink ring-offset-4 ring-offset-bg' : ''
       }`}
     >
@@ -77,18 +69,7 @@ export default function MealPricingCard({ rate, selected, onSelect }) {
         ))}
       </ul>
 
-      <div className="mt-auto pt-8">
-        <a
-          href={whatsappUrl || BRAND.social?.find((s) => s.label === 'WhatsApp')?.href || '#'}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={`${BTN} ${s.btn}`}
-          aria-label={`Enquire about ${rate.title} at ${formatINR(rate.price)} on WhatsApp (opens in new tab)`}
-        >
-          <MessageCircle className="h-5 w-5 shrink-0" aria-hidden="true" />
-          <span>Enquire on WhatsApp</span>
-        </a>
-      </div>
+
     </div>
   );
 }

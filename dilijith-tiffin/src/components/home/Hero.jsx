@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { BadgeCheck, Leaf, Repeat } from 'lucide-react';
 import Button from '../common/Button';
 import Logo from '../common/Logo';
-import { useAuth } from '../../context/AuthContext';
+import { WHATSAPP_URL } from '../../config/brand';
 
 const TRUST = [
   { icon: Leaf, label: 'Freshly Prepared' },
@@ -30,11 +30,6 @@ function HeroVisual() {
 }
 
 export default function Hero() {
-  const { isAuthenticated, role } = useAuth();
-  const getStartedTo = isAuthenticated
-    ? (role === 'admin' ? '/admin/dashboard' : '/user/dashboard')
-    : '/register';
-
   return (
     <section className="section">
       <div className="container-x grid items-center gap-12 lg:grid-cols-2">
@@ -46,10 +41,10 @@ export default function Hero() {
             Enjoy authentic North Indian meals with convenient meal plans, free delivery, flexible meal customization, and meal carry-forward.
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <Button to="/plans" variant="primary" className="h-12 font-bold px-8">
-              Explore Our Rates
+            <Button to="/#rates" variant="primary" className="h-12 font-bold px-8">
+              Explore Our Plans
             </Button>
-            <Button to={getStartedTo} variant="outline" className="h-12 font-bold px-8">
+            <Button href={WHATSAPP_URL} variant="outline" className="h-12 font-bold px-8">
               Get Started
             </Button>
           </div>

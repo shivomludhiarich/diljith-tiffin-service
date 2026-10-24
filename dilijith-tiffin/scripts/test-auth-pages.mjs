@@ -1,4 +1,7 @@
 import 'dotenv/config';
+if (!process.env.TEST_MONGODB_URI || !/^dts_test_/.test(process.env.TEST_MONGODB_DB_NAME || '')) throw new Error('Use an isolated TEST_MONGODB_URI and dts_test_ database.');
+process.env.MONGODB_URI = process.env.TEST_MONGODB_URI;
+process.env.MONGODB_DB_NAME = process.env.TEST_MONGODB_DB_NAME;
 import mongoose from 'mongoose';
 import { connectDB } from '../server/config/db.js';
 import User from '../server/models/User.js';
@@ -48,7 +51,7 @@ async function runAuthTests() {
 
     // 1. Register with valid details
     console.log('\n[Test 1] Register with valid details');
-    const validPhone = '9' + String(Date.now()).slice(-9);
+    const validPhone = '9876543210';
     const validAddress = {
       houseOrFlat: 'Flat 402, Block B',
       street: 'Main Market Road',
@@ -113,7 +116,7 @@ async function runAuthTests() {
       method: 'POST',
       body: JSON.stringify({
         name: 'Mismatch User',
-        phone: `9${Math.floor(100000000 + Math.random() * 900000000)}`,
+        phone: '9876543211',
         password: 'Password@123',
         confirmPassword: 'DifferentPassword@123',
         address: validAddress,

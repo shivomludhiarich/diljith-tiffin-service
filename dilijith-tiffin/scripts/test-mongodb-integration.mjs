@@ -1,4 +1,9 @@
+import { randomUUID } from 'node:crypto';
+import { todayStr, addDays } from '../src/utils/dates.js';
 import 'dotenv/config';
+if (!process.env.TEST_MONGODB_URI || !/^dts_test_/.test(process.env.TEST_MONGODB_DB_NAME || '')) throw new Error('Use an isolated TEST_MONGODB_URI and dts_test_ database.');
+process.env.MONGODB_URI = process.env.TEST_MONGODB_URI;
+process.env.MONGODB_DB_NAME = process.env.TEST_MONGODB_DB_NAME;
 import mongoose from 'mongoose';
 import { connectDB, isDbConnected } from '../server/config/db.js';
 import User from '../server/models/User.js';
@@ -13,6 +18,12 @@ let server;
 let baseUrl;
 
 async function request(path, options = {}) {
+  if (options.method === 'POST' && /subscriptions|meals/.test(path)) {
+    const body = JSON.parse(options.body || '{}');
+    body.opId ??= randomUUID();
+    if (path.endsWith('/adjust')) body.mealType = 'lunch';
+    options.body = JSON.stringify(body);
+  }
   const res = await fetch(`${baseUrl}${path}`, {
     ...options,
     headers: {
@@ -60,7 +71,7 @@ async function runTests() {
     // 3. User registration and secure login
     console.log('\n[Scenario 3] User Registration & Login with Bcrypt & JWT');
     const testEmail = `testuser_${Date.now()}@example.com`;
-    const testPhone = '9' + String(Date.now()).slice(-9);
+    const testPhone = '9876543212';
     const regRes = await request('/auth/register', {
       method: 'POST',
       body: JSON.stringify({
@@ -68,6 +79,7 @@ async function runTests() {
         email: testEmail,
         password: 'Password@123',
         phone: testPhone,
+        address: { houseOrFlat: '1', street: 'Test Road', city: 'Test City', state: 'Test State', postalCode: '110001' },
       }),
     });
     assert(regRes.status === 201 && !!regRes.data.token, 'User registration creates user and returns JWT token');
@@ -105,6 +117,7 @@ async function runTests() {
     if (!adminUser) {
       adminUser = await User.create({
         name: 'Test Admin',
+        phone: '9000000000',
         email: `admin_${Date.now()}@example.com`,
         password: 'AdminPassword@123',
         role: 'admin',
@@ -120,7 +133,7 @@ async function runTests() {
 
     // 6. Admin allocates 10 lunch credits to a user
     console.log('\n[Scenario 6] Allocate 10 Lunch Credits Independently');
-    const today = new Date().toISOString().slice(0, 10);
+    const today = todayStr();
     const allocLunch = await request('/admin/subscriptions/allocate', {
       method: 'POST',
       headers: { Authorization: `Bearer ${adminToken}` },
@@ -129,7 +142,7 @@ async function runTests() {
         mealTypes: ['lunch'],
         durationMonths: 1,
         startDate: today,
-        allocatedMeals: 10,
+        mealAllocations: { lunch: 10 },
       }),
     });
     assert(allocLunch.status === 201 && allocLunch.data.ok, 'Admin allocates 10 lunch credits');
@@ -147,13 +160,13 @@ async function runTests() {
 
     // 7. User consumes 2 lunches, leaving 8 lunch credits
     console.log('\n[Scenario 7] Consume 2 Lunches -> Exactly 8 Remain');
-    const lunchRecords = await MealRecord.find({ subscription: lunchSubId }).limit(2);
+    await Subscription.updateOne({ _id: lunchSubId }, { $set: { startDate: addDays(today, -1) } });
+    const yesterday = await MealRecord.create({ user: testUserId, subscription: lunchSubId, mealType: 'lunch', date: addDays(today, -1), accountingVersion: 2 });
+    const lunchRecords = [yesterday, await MealRecord.findOne({ subscription: lunchSubId, date: today })];
     for (const rec of lunchRecords) {
-      rec.status = 'Consumed';
-      rec.consumedAt = new Date();
-      await rec.save();
+      const consumed = await request(`/admin/meals/${rec._id}/consume`, { method: 'POST', headers: { Authorization: `Bearer ${adminToken}` } });
+      assert(consumed.data.ok, 'Delivery API consumes exactly one lunch');
     }
-    await Subscription.findByIdAndUpdate(lunchSubId, { $inc: { consumedMeals: 2 } });
 
     userDash = await request('/user/dashboard', {
       headers: { Authorization: `Bearer ${userToken}` },
@@ -174,7 +187,7 @@ async function runTests() {
         mealTypes: ['dinner'],
         durationMonths: 1,
         startDate: today,
-        allocatedMeals: 12,
+        mealAllocations: { dinner: 12 },
       }),
     });
     assert(allocDinner.status === 201 && allocDinner.data.ok, 'Admin allocates 12 dinner credits without replacing lunch');
@@ -198,7 +211,7 @@ async function runTests() {
         mealTypes: ['breakfast'],
         durationMonths: 1,
         startDate: today,
-        allocatedMeals: 15,
+        mealAllocations: { breakfast: 15 },
       }),
     });
     assert(allocBreakfast.status === 201, 'Admin allocates 15 breakfast credits');
@@ -215,18 +228,12 @@ async function runTests() {
 
     // 10. Repeated consumption requests cannot deduct twice
     console.log('\n[Scenario 10] Prevent Double Deductions & Idempotency');
-    const sampleRecord = await MealRecord.findOne({ subscription: lunchSubId, status: 'Scheduled' });
-    if (sampleRecord) {
-      sampleRecord.status = 'Consumed';
-      await sampleRecord.save();
-      // Trying to consume an already consumed record
-      const checkAgain = await MealRecord.findById(sampleRecord._id);
-      assert(checkAgain.status === 'Consumed', 'Consumed status is terminal and cannot double-consume');
-    }
+    const duplicate = await request(`/admin/meals/${lunchRecords[0]._id}/consume`, { method: 'POST', headers: { Authorization: `Bearer ${adminToken}` } });
+    assert(duplicate.status === 409, 'Repeated consumption is rejected by the API');
 
     // 11. Permitted cancellations follow policy and preserve credits
     console.log('\n[Scenario 11] Timely Cancellation Preserves Credits');
-    const dinnerRecord = await MealRecord.findOne({ subscription: allocDinner.data.subscription._id, status: 'Scheduled' });
+    const dinnerRecord = await MealRecord.findOne({ subscription: allocDinner.data.subscription._id, date: addDays(today, 1), status: 'Scheduled' });
     if (dinnerRecord) {
       const cancelRes = await request(`/user/meals/${dinnerRecord._id}/cancel`, {
         method: 'POST',
@@ -254,7 +261,7 @@ async function runTests() {
         reason: 'Attempt invalid excess reduction',
       }),
     });
-    assert(negAdjRes.status === 400, 'Adjustment rejecting negative balance works correctly');
+    assert(negAdjRes.status === 409, 'Adjustment rejecting negative balance works correctly');
 
     const validAdjRes = await request(`/admin/subscriptions/${lunchSubId}/adjust`, {
       method: 'POST',

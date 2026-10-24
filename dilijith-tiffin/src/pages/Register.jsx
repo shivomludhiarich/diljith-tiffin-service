@@ -8,6 +8,7 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { COUNTRY_CODES, validatePhone } from '../utils/phone';
 import Logo from '../components/common/Logo';
+import { normalizeEmail, validEmail, passwordError } from '../utils/authValidation';
 import { BRAND } from '../config/brand';
 
 // ---------------------------------------------------------------------------
@@ -51,6 +52,7 @@ export default function Register() {
   const [name, setName]             = useState('');
   const [countryCode, setCountryCode] = useState('+91');
   const [phone, setPhone]           = useState('');
+  const [email, setEmail] = useState('');
 
   // Address
   const [houseOrFlat, setHouseOrFlat] = useState('');
@@ -100,6 +102,7 @@ export default function Register() {
     const e = {};
 
     if (!name.trim()) e.name = 'Please enter your full name.';
+    if (email.trim() && !validEmail(normalizeEmail(email))) e.email = 'Enter a valid email address.';
 
     if (!phone.trim()) {
       e.phone = 'Please enter your phone number.';
@@ -122,6 +125,10 @@ export default function Register() {
 
     if (!confirmPassword)    e.confirmPassword = 'Please confirm your password.';
     else if (password !== confirmPassword) e.confirmPassword = 'Passwords do not match.';
+    if (!e.password && !e.confirmPassword) {
+      const policyError = passwordError(password, confirmPassword);
+      if (policyError) e.password = policyError;
+    }
 
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -136,6 +143,7 @@ export default function Register() {
     try {
       const res = await registerWithCredentials({
         name: name.trim(),
+        email: normalizeEmail(email),
         phone: phone.trim(),
         countryCode,
         password,
@@ -279,8 +287,14 @@ export default function Register() {
                       {errors.phone ? (
                         <FieldError message={errors.phone} />
                       ) : (
-                        <p className="mt-1 text-xs text-muted">We will use this to coordinate meal deliveries.</p>
+                        <p className="mt-1 text-xs text-muted">Use this number for your account and meal deliveries.</p>
                       )}
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label htmlFor="register-email" className="block text-sm font-bold text-ink">Email (optional)</label>
+                      <input id="register-email" name="email" type="email" autoComplete="email" maxLength={254} className={`${inputCls} mt-1`} value={email} onChange={e => { setEmail(e.target.value); clearErr('email'); }} />
+                      <p className="mt-1 text-xs text-muted">Optional contact email. Password recovery is assisted by the service team.</p>
+                      <FieldError message={errors.email} />
                     </div>
                   </div>
                 </div>

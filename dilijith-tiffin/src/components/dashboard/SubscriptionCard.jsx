@@ -38,7 +38,7 @@ export default function SubscriptionCard({ item, customerName, past = false }) {
         </div>
         <Stat label="Allocated credits" value={credit.entitlement} />
         <Stat label="Consumed" value={credit.consumed} />
-        <Stat label="Remaining" value={credit.remaining} strong />
+        <Stat label="Remaining" value={credit.remaining ?? "Review required"} strong />
       </dl>
 
       <div className="mt-4">

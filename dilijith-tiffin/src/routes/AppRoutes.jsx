@@ -2,7 +2,6 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import PublicLayout from '../layouts/PublicLayout';
 import ProtectedRoute from './ProtectedRoute';
 import Home from '../pages/Home';
-import Plans from '../pages/Plans';
 import NotFound from '../pages/NotFound';
 import UserDashboard from '../pages/user/UserDashboard';
 import AdminLayout from '../layouts/AdminLayout';
@@ -13,6 +12,8 @@ import ComingSoon from '../pages/ComingSoon';
 
 import Login from '../pages/Login';
 import Register from '../pages/Register';
+import ForgotPassword from '../pages/ForgotPassword';
+import ResetPassword from '../pages/ResetPassword';
 
 const soon = (title, stage) => <ComingSoon title={title} stage={stage} />;
 
@@ -22,9 +23,11 @@ export default function AppRoutes() {
     <Routes>
       <Route element={<PublicLayout />}>
         <Route path="/" element={<Home />} />
-        <Route path="/plans" element={<Plans />} />
+        <Route path="/plans" element={<Navigate to="/#rates" replace />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
 
         <Route element={<ProtectedRoute role="user" />}>
           <Route path="/user/dashboard" element={<UserDashboard />} />

@@ -19,6 +19,7 @@ export default function AdjustCreditsModal({ subscriptionId, onClose }) {
   const { state, today, credits, adjust } = useAdminData();
   const { notify } = useToast();
   const opId = useRef(uid('op'));
+  const [mealType, setMealType] = useState('');
   const [amount, setAmount] = useState('');
   const [reason, setReason] = useState('');
   const [step, setStep] = useState('form');
@@ -37,7 +38,9 @@ export default function AdjustCreditsModal({ subscriptionId, onClose }) {
     );
   }
 
-  const c = credits[sub.id];
+  const selected = mealType || sub.mealTypes[0];
+  const c = sub.balances?.[selected];
+  if (!c) return <Modal open onClose={onClose} title="Credit review required"><p>Verify the original meal allocations before adjusting this subscription.</p></Modal>;
   const checked = validateAdjustment(c, { amount, reason });
   const n = checked.amount;
   const preview = !checked.errors.amount ? { entitlement: c.entitlement + n, remaining: c.remaining + n } : null;
@@ -52,7 +55,7 @@ export default function AdjustCreditsModal({ subscriptionId, onClose }) {
     if (busy) return;
     setBusy(true);
     try {
-      const result = await adjust({ subscriptionId: sub.id, amount, reason, opId: opId.current });
+      const result = await adjust({ subscriptionId: sub.id, amount, reason, mealType: selected, opId: opId.current });
       if (result.ok) {
         notify(`${n > 0 ? '+' : ''}${n} meal credits applied to ${sub.id} (${user.name}).`);
         onClose();
@@ -72,6 +75,7 @@ export default function AdjustCreditsModal({ subscriptionId, onClose }) {
     <Modal open onClose={onClose} title="Adjust meal credits">
       <p className="mb-1 text-sm font-semibold">{user.name} · {sub.id}</p>
       <p className="mb-4 text-xs text-muted">Meal types: {sub.mealTypes.join(', ')} · expires {sub.endDate}</p>
+      <label className="block text-sm">Meal type<select className="field" value={selected} disabled={step !== "form"} onChange={e => setMealType(e.target.value)}>{sub.mealTypes.map(t => <option key={t} value={t}>{t}</option>)}</select></label>
       <dl className="rounded-lg bg-white p-4 text-sm">
         <Row label="Current entitlement" value={`${c.entitlement} meals`} />
         <Row label="Meals consumed" value={c.consumed} />

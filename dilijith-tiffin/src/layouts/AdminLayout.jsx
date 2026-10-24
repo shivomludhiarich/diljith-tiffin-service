@@ -1,3 +1,4 @@
+import { useAdminData } from '../context/AdminDataContext';
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { CalendarCheck, LayoutDashboard, LogOut, Menu, Users, X } from 'lucide-react';
@@ -58,6 +59,7 @@ function SidebarContent({ onNavigate }) {
 }
 
 export default function AdminLayout() {
+  const { loading, error, refreshFromBackend } = useAdminData();
   const [open, setOpen] = useState(false);
   const { pathname } = useLocation();
 
@@ -98,7 +100,7 @@ export default function AdminLayout() {
       )}
 
       <main className="min-w-0 flex-1 p-4 sm:p-6 lg:p-8">
-        <Outlet />
+        <>{loading ? <p role="status">Loading balances?</p> : error ? <div role="alert"><p>Balances could not be refreshed: {error}</p><button onClick={refreshFromBackend}>Try again</button></div> : <Outlet />}</>
       </main>
     </div>
   );

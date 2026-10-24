@@ -19,7 +19,7 @@ const STATUS_OPTIONS = [ALL, 'Active', 'Expiring soon', 'Expired', 'Cancelled'];
 const FROM_URL = { active: 'Active', expiring: 'Expiring soon', expired: 'Expired', cancelled: 'Cancelled' };
 
 export default function AdminSubscriptions() {
-  const { state, today, credits, refreshFromBackend } = useAdminData();
+  const { state, today, credits } = useAdminData();
   const [params] = useSearchParams();
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState(FROM_URL[params.get('status')] ?? ALL);
@@ -27,10 +27,6 @@ export default function AdminSubscriptions() {
   const [userId, setUserId] = useState(null);
   const [allocating, setAllocating] = useState(false);
   const { requestRenew, requestCancel, dialogs } = useSubscriptionActions();
-
-  useState(() => {
-    if (refreshFromBackend) refreshFromBackend();
-  });
 
   const all = useMemo(() => {
     const userById = Object.fromEntries(state.users.map((u) => [u.id, u]));
@@ -57,7 +53,7 @@ export default function AdminSubscriptions() {
     { key: 'allocated', label: 'Allocated meals', render: (r) => (
       <>{r.credit.entitlement}{r.credit.adjustments !== 0 && <span className="block text-xs text-muted">incl. {r.credit.adjustments > 0 ? '+' : ''}{r.credit.adjustments} adjusted</span>}</>) },
     { key: 'consumed', label: 'Meals consumed', render: (r) => r.credit.consumed },
-    { key: 'remaining', label: 'Meals remaining', render: (r) => <span className="font-bold">{r.credit.remaining}</span> },
+    { key: 'remaining', label: 'Meals remaining', render: (r) => <span className="font-bold">{r.credit.remaining ?? "Review required"}</span> },
     { key: 'status', label: 'Status', render: (r) => <StatusBadge status={r.status} /> },
     { key: 'actions', label: 'Actions', actions: true, render: (r) => (
       <div className="flex flex-wrap gap-2">

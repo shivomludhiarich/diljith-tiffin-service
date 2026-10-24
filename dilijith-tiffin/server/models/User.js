@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
+import { hashPassword } from '../utils/password.js';
 
 const addressSchema = new mongoose.Schema(
   {
@@ -16,6 +17,11 @@ const addressSchema = new mongoose.Schema(
 
 const userSchema = new mongoose.Schema(
   {
+    creditRevision: { type: Number, default: 0, select: false },
+    tokenVersion: { type: Number, default: 0 },
+    resetTokenHash: { type: String, select: false },
+    resetTokenCreatedAt: { type: Date, select: false },
+    resetTokenExpiresAt: { type: Date, select: false },
     name: {
       type: String,
       required: [true, 'Please provide a name'],
@@ -66,10 +72,11 @@ const userSchema = new mongoose.Schema(
   }
 );
 
+userSchema.index({ resetTokenHash: 1 }, { unique: true, sparse: true });
+
 userSchema.pre('save', async function () {
   if (!this.isModified('password')) return;
-  const salt = await bcrypt.genSalt(10);
-  this.password = await bcrypt.hash(this.password, salt);
+  this.password = await hashPassword(this.password);
 });
 
 userSchema.methods.matchPassword = async function (enteredPassword) {

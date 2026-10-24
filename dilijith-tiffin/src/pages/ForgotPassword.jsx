@@ -1,0 +1,2 @@
+import { Link } from 'react-router-dom';
+export default function ForgotPassword() { return <section className="section"><h1>Account recovery</h1><p>Contact the service team through your established support contact to verify your identity. No automatic email or SMS is sent. Never share your password.</p><Link className="font-bold underline" to="/reset-password">Start assisted recovery</Link></section>; }

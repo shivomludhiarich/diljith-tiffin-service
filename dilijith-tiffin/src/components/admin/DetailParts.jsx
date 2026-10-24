@@ -21,6 +21,7 @@ export const Field = ({ label, children }) => (
 
 /** The same five numbers everywhere: initial allocation, adjustments, entitlement, consumed, remaining. */
 export function CreditBreakdown({ credit }) {
+  if (!credit || credit.remaining === null) return <p role="alert">Original meal allocations require review.</p>;
   const cells = [
     ['Initial allocation', credit.allocated],
     ['Net adjustments', `${credit.adjustments > 0 ? '+' : ''}${credit.adjustments}`],

@@ -11,6 +11,7 @@ export function generateToken(user) {
     {
       id: user._id.toString(),
       role: user.role,
+      tokenVersion: user.tokenVersion || 0,
       email: user.email,
     },
     JWT_SECRET,
@@ -35,7 +36,7 @@ export async function protect(req, res, next) {
 
     const decoded = jwt.verify(token, JWT_SECRET);
     const user = await User.findById(decoded.id).select('-password');
-    if (!user) {
+    if (!user || (decoded.tokenVersion || 0) !== (user.tokenVersion || 0)) {
       return res.status(401).json({
         ok: false,
         message: 'Account no longer exists.',

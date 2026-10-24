@@ -1,9 +1,6 @@
-// Admin business logic. Pure functions only: (state, input, ctx) -> { ok, state, ... }.
-// This file is the ONE place that knows how meals, credits and subscription status are calculated.
-//
-// Meal accounting (per subscription):
-//   remaining = allocatedMeals - consumedMeals + netCreditAdjustments
-//   consumedMeals = meal records whose status is "Consumed". Scheduled, Cancelled and Missed never deduct.
+// Display helpers and legacy demo-fixture commands. Authenticated operations use
+// the backend credit service; demo commands are never used as API fallbacks.
+// Backend `credit` and `balances` fields are authoritative for API records.
 import { addDays, diffDays, endDateFor, isValidDateStr } from './dates.js';
 import { MEAL_KEYS } from './pricing.js';
 
@@ -45,6 +42,9 @@ export function creditMap(state) {
     c.entitlement = c.allocated + c.adjustments;
     c.remaining = c.allocated - c.consumed + c.adjustments;
   }
+  for (const s of state.subscriptions) {
+    if ('credit' in s) map[s.id] = s.credit ?? { allocated: null, consumed: null, adjustments: null, entitlement: null, remaining: null };
+  }
   return map;
 }
 export const creditSummary = (state, subId) => creditMap(state)[subId] ?? null;
@@ -63,10 +63,14 @@ export function perMealCredits(state, userId, today, credits) {
     // Collect all live subs that include this meal type
     const covering = live.filter((s) => s.mealTypes.includes(mealType));
     if (!covering.length) continue;
+    if (covering.some(s => s.requiresCreditReview || (!('balances' in s) && s.mealTypes.length > 1))) {
+      result[mealType] = { allocated: null, consumed: null, adjustments: null, entitlement: null, remaining: null, requiresReview: true };
+      continue;
+    }
     // Sum credits across all covering subscriptions
     let allocated = 0, consumed = 0, adjustments = 0;
     for (const s of covering) {
-      const c = credits[s.id];
+      const c = 'balances' in s ? s.balances?.[mealType] : (s.mealTypes.length === 1 ? credits[s.id] : null);
       if (!c) continue;
       allocated += c.allocated;
       consumed += c.consumed;

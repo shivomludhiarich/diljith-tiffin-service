@@ -4,8 +4,8 @@ import StatusBadge from '../admin/StatusBadge';
 import { mealLabel } from '../../utils/adminLogic';
 
 const ICONS = { breakfast: Coffee, lunch: Sun, dinner: Moon };
-const fmt = (d) => d.toLocaleString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
-const fmtTime = (iso) => new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
+const fmt = (d) => new Date(d).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
+const fmtTime = (iso) => new Date(iso).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
 
 function Entry({ meal, entry, showPlan, onCancel }) {
   const reasonId = `closed-${entry.id}`;

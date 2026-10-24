@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Phone, MapPin, AlertTriangle, Search, X, Loader2, Users, Package, Coffee, Sun, Moon } from 'lucide-react';
 import Drawer from './Drawer';
+import { useAdminData } from '../../context/AdminDataContext';
 import { api } from '../../services/api';
 import { formatDate } from '../../utils/dates';
 
@@ -20,7 +21,7 @@ function formatAddress(address) {
   return parts.join(', ');
 }
 
-function DeliveryCard({ entry, index }) {
+function DeliveryCard({ entry, index, onDelivered, busy }) {
   const addrText = formatAddress(entry.address);
   return (
     <li className={`rounded-xl border p-4 ${!entry.hasAddress ? 'border-accent/60 bg-accent/5' : 'border-line bg-white'}`}>
@@ -39,6 +40,7 @@ function DeliveryCard({ entry, index }) {
         )}
       </div>
 
+      <button className="mt-3 rounded-lg bg-brand px-3 py-2 text-white" disabled={busy} onClick={() => onDelivered(entry)}>Confirm delivered</button>
       {/* Phone */}
       <a
         href={`tel:${entry.phone}`}
@@ -65,6 +67,8 @@ function DeliveryCard({ entry, index }) {
 }
 
 export default function DeliveryDrawer({ open, onClose, mealType, date }) {
+  const { refreshFromBackend } = useAdminData();
+  const [delivering, setDelivering] = useState(false);
   const [data, setData]       = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState('');
@@ -90,6 +94,16 @@ export default function DeliveryDrawer({ open, onClose, mealType, date }) {
     else       { setData(null); setError(''); }
   }, [open, load]);
 
+  const delivered = async entry => {
+    if (delivering) return;
+    setDelivering(true);
+    try {
+      for (const id of entry.recordIds) await api.admin.consume(id, `delivery-${id}`);
+      await load();
+      if (!await refreshFromBackend()) setError('Delivery saved, but balances could not be refreshed.');
+    } catch (err) { setError(err.message); }
+    finally { setDelivering(false); }
+  };
   const Icon = mealType ? MEAL_ICONS[mealType] : null;
   const iconColor = mealType ? MEAL_COLORS[mealType] : '';
   const label = mealType ? mealType.charAt(0).toUpperCase() + mealType.slice(1) : '';
@@ -196,7 +210,7 @@ export default function DeliveryDrawer({ open, onClose, mealType, date }) {
           ) : (
             <ul className="space-y-3">
               {filtered.map((entry, i) => (
-                <DeliveryCard key={entry.userId} entry={entry} index={i} />
+                <DeliveryCard key={entry.userId} entry={entry} index={i} onDelivered={delivered} busy={delivering} />
               ))}
             </ul>
           )}

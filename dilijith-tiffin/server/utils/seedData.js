@@ -47,6 +47,17 @@ export async function seedInitialDataIfEmpty() {
 
   for (const s of seed.subscriptions) {
     const user = userMap[s.userId] || admin;
+    const baseAlloc = Math.floor(s.allocatedMeals / s.mealTypes.length);
+    const remAlloc = s.allocatedMeals % s.mealTypes.length;
+    const subMealCredits = { breakfast: null, lunch: null, dinner: null };
+    s.mealTypes.forEach((m, idx) => {
+      subMealCredits[m] = {
+        allocated: baseAlloc + (idx < remAlloc ? 1 : 0),
+        consumed: 0,
+        adjustments: 0,
+      };
+    });
+
     const sub = await Subscription.create({
       subCode: s.id,
       user: user._id,
@@ -57,6 +68,7 @@ export async function seedInitialDataIfEmpty() {
       allocatedMeals: s.allocatedMeals,
       consumedMeals: 0,
       approvedAdjustments: 0,
+      mealCredits: subMealCredits,
       status: s.status,
       demoPrice: s.demoPrice ?? null,
       cancelledAt: s.cancelledAt ? new Date(s.cancelledAt) : null,
@@ -75,8 +87,19 @@ export async function seedInitialDataIfEmpty() {
         user: sub.user,
         amount: a.amount,
         reason: a.reason,
+        mealType: a.mealType || null,
       });
       sub.approvedAdjustments += a.amount;
+      if (sub.mealCredits) {
+        const targetTypes = a.mealType && sub.mealTypes.includes(a.mealType) ? [a.mealType] : sub.mealTypes;
+        const adjBase = Math.floor(a.amount / targetTypes.length);
+        const adjRem = a.amount % targetTypes.length;
+        targetTypes.forEach((m, idx) => {
+          if (sub.mealCredits[m]) {
+            sub.mealCredits[m].adjustments += adjBase + (idx < Math.abs(adjRem) ? (adjRem > 0 ? 1 : -1) : 0);
+          }
+        });
+      }
       await sub.save();
     }
   }
@@ -99,6 +122,9 @@ export async function seedInitialDataIfEmpty() {
       });
       if (m.status === 'Consumed') {
         sub.consumedMeals += 1;
+        if (sub.mealCredits && sub.mealCredits[m.mealType]) {
+          sub.mealCredits[m.mealType].consumed += 1;
+        }
       }
     }
   }
@@ -106,7 +132,7 @@ export async function seedInitialDataIfEmpty() {
     await MealRecord.insertMany(mealDocs);
   }
 
-  // Save updated consumedMeals counts on subscriptions
+  // Save updated consumedMeals and mealCredits counts on subscriptions
   for (const sub of Object.values(subMap)) {
     await sub.save();
   }

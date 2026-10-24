@@ -9,10 +9,21 @@ import { AdjustmentList, CreditBreakdown, Field, MealHistory, Section } from './
 import { useAdminData } from '../../context/AdminDataContext';
 import { NO_SUB, durationLabel, isLive, mealsLabel, recentMeals, subscriptionStatus, perMealCredits } from '../../utils/adminLogic';
 import { formatDate } from '../../utils/dates';
+import { api } from '../../services/api';
 
 export default function UserDetailsDrawer({ userId, onClose }) {
   const { state, today, credits } = useAdminData();
   const [allocating, setAllocating] = useState(false);
+  const [reference, setReference] = useState('');
+  const [verified, setVerified] = useState(false);
+  const [resetBusy, setResetBusy] = useState(false);
+  const [resetMessage, setResetMessage] = useState('');
+  async function resetPassword() {
+    setResetBusy(true);
+    try { const result = await api.admin.resetCustomerPassword(userId, { reference: reference.trim(), identityVerified: verified }); setResetMessage(result.message); setReference(''); setVerified(false); }
+    catch (err) { setResetMessage(err.message); }
+    finally { setResetBusy(false); }
+  }
   // adjusting: null | subscriptionId
   const [adjusting, setAdjusting] = useState(null);
 
@@ -74,6 +85,13 @@ export default function UserDetailsDrawer({ userId, onClose }) {
         </div>
 
         {/* Per-meal credit breakdown */}
+        <Section title="Password recovery">
+          <p>Verify this customer's identity through your established support process. Ask them to open /reset-password on their own device and give you their reference directly. Never approve a reference provided by someone else. No message is sent.</p>
+          <label className="block mt-3">Recovery reference<input className="field" value={reference} onChange={e => setReference(e.target.value)} maxLength={64} /></label>
+          <label className="block my-3"><input type="checkbox" checked={verified} onChange={e => setVerified(e.target.checked)} /> I verified this customer's identity and reference.</label>
+          <Button disabled={resetBusy || !verified || !/^[a-f0-9]{64}$/.test(reference.trim())} onClick={resetPassword}>Reset Password</Button>
+          {resetMessage && <p role="status">{resetMessage}</p>}
+        </Section>
         <Section title="Credits by meal type" action={<StatusBadge status={overallStatusLabel} />}>
           {hasLive ? (
             <dl className="grid grid-cols-3 gap-3">
@@ -84,7 +102,7 @@ export default function UserDetailsDrawer({ userId, onClose }) {
                     <dt className="text-xs font-semibold text-muted capitalize">{mealType}</dt>
                     {mc ? (
                       <>
-                        <dd className="font-display mt-1 text-2xl font-bold text-leaf">{mc.remaining}</dd>
+                        <dd className="font-display mt-1 text-2xl font-bold text-leaf">{mc.remaining ?? "Review required"}</dd>
                         <p className="text-xs text-muted">{mc.consumed} consumed</p>
                         <p className="text-xs text-muted">{mc.entitlement} allotted</p>
                       </>
@@ -129,7 +147,7 @@ export default function UserDetailsDrawer({ userId, onClose }) {
                         </div>
                         <div>
                           <dt className="text-muted">Remaining</dt>
-                          <dd className="font-bold text-leaf">{credit.remaining}</dd>
+                          <dd className="font-bold text-leaf">{credit.remaining ?? "Review required"}</dd>
                         </div>
                       </dl>
                     )}

@@ -15,8 +15,8 @@ const meal = (list, type) => list.find((m) => m.mealType === type);
 
 test('cancellation deadlines come from one policy', () => {
   assert.equal(cutoffFor('2026-10-16', 'breakfast').getTime(), new Date(2026, 9, 15, 21, 0).getTime()); // 9 PM the evening before
-  assert.equal(cutoffFor('2026-10-15', 'lunch').getTime(), at(9).getTime());
-  assert.equal(cutoffFor('2026-10-15', 'dinner').getTime(), at(15).getTime());
+  assert.equal(cutoffFor('2026-10-15', 'lunch').getTime(), at(10).getTime());
+  assert.equal(cutoffFor('2026-10-15', 'dinner').getTime(), at(19).getTime());
 });
 
 test('stats are derived from running subscriptions only (u2: 22 consumed, 38 left)', () => {
@@ -91,9 +91,9 @@ test("today's meals reflect the real meal records", () => {
 test('cancel button availability follows the deadline', () => {
   const state = fresh();
   const at10 = todaysMeals(state, 'u2', TODAY, at(10));
-  assert.equal(meal(at10, 'lunch').entries[0].cancellable, false); // 9:00 AM deadline passed
-  assert.equal(meal(at10, 'dinner').entries[0].cancellable, true); // 3:00 PM deadline ahead
-  const at16 = todaysMeals(state, 'u2', TODAY, at(16));
+  assert.equal(meal(at10, 'lunch').entries[0].cancellable, false); // 10:00 AM deadline passed
+  assert.equal(meal(at10, 'dinner').entries[0].cancellable, true); // 7:00 PM deadline ahead
+  const at16 = todaysMeals(state, 'u2', TODAY, at(19));
   assert.equal(meal(at16, 'dinner').entries[0].cancellable, false);
   assert.equal(meal(todaysMeals(state, 'u2', TODAY, at(8, 59)), 'lunch').entries[0].cancellable, true);
 });
@@ -129,8 +129,8 @@ test('server-side rules: duplicate, deadline, ownership, wrong status', () => {
   const first = cancelMeal(state, { userId: 'u2', recordId: dinner.id }, ctxAt(at(10)));
   assert.match(cancelMeal(first.state, { userId: 'u2', recordId: dinner.id }, ctxAt(at(10))).errors.form, /already cancelled/);
   assert.match(cancelMeal(state, { userId: 'u2', recordId: lunch.id }, ctxAt(at(10))).errors.form, /deadline/);
-  assert.match(cancelMeal(state, { userId: 'u2', recordId: dinner.id }, ctxAt(at(15, 1))).errors.form, /deadline/);
-  assert.equal(cancelMeal(state, { userId: 'u2', recordId: dinner.id }, ctxAt(at(15, 0))).ok, true); // exactly on the deadline
+  assert.match(cancelMeal(state, { userId: 'u2', recordId: dinner.id }, ctxAt(at(19, 1))).errors.form, /deadline/);
+  assert.equal(cancelMeal(state, { userId: 'u2', recordId: dinner.id }, ctxAt(at(18, 59))).ok, true); // before the deadline
   assert.match(cancelMeal(state, { userId: 'u3', recordId: dinner.id }, ctxAt(at(10))).errors.form, /not found/); // someone else's meal
   assert.match(cancelMeal(state, { userId: 'u2', recordId: 'nope' }, ctxAt(at(10))).errors.form, /not found/);
   const consumed = state.mealRecords.find((m) => m.userId === 'u2' && m.status === 'Consumed');

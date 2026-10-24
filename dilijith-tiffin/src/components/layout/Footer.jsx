@@ -30,7 +30,7 @@ export default function Footer() {
         <nav aria-label="Menu and pricing">
           <h3 className="mb-3 text-lg">Menu and pricing</h3>
           <ul className={col}>
-            <li><Link className={lnk} to="/plans">Rates &amp; Pricing</Link></li>
+            <li><Link className={lnk} to="/#rates">Meal Plans</Link></li>
             <li><Link className={lnk} to="/register">Create an account</Link></li>
           </ul>
         </nav>

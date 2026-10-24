@@ -2,7 +2,7 @@
 const pad = (n) => String(n).padStart(2, '0');
 
 export const toDateStr = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-export const todayStr = (now = new Date()) => toDateStr(now);
+export const todayStr = (now = new Date()) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
 
 export function parseDate(s) {
   const [y, m, d] = s.split('-').map(Number);

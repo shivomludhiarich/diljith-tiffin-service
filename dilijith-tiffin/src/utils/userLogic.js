@@ -17,10 +17,7 @@ export const NOT_SCHEDULED = 'Not scheduled';
 /** The moment cancellation closes for a meal on `date`. */
 export function cutoffFor(date, mealType, policy = MEAL_POLICY) {
   const rule = policy.cancellation[mealType];
-  const [h, m] = rule.time.split(':').map(Number);
-  const d = parseDate(addDays(date, rule.dayOffset));
-  d.setHours(h, m, 0, 0);
-  return d;
+  return new Date(`${addDays(date, rule.dayOffset)}T${rule.time}:00+05:30`);
 }
 
 export const planDetails = (sub) =>
@@ -84,7 +81,7 @@ export function todaysMeals(state, userId, today, now = new Date(), policy = MEA
       .filter((m) => m.userId === userId && m.date === today && m.mealType === mealType && liveIds.has(m.subscriptionId))
       .map((m) => ({
         id: m.id, subscriptionId: m.subscriptionId, status: m.status, cancelledAt: m.cancelledAt ?? null,
-        cancellable: m.status === MEAL_STATUS.SCHEDULED && now <= cutoff,
+        cancellable: m.status === MEAL_STATUS.SCHEDULED && now < cutoff,
       }));
     return { mealType, included, cutoff, entries, status: entries.length ? null : included ? NOT_SCHEDULED : NOT_INCLUDED };
   });
@@ -115,7 +112,7 @@ export function cancelMeal(state, { userId, recordId }, { today, nowIso }, polic
   if (!sub || !isLive(subscriptionStatus(sub, today))) return fail('This meal belongs to a subscription that is no longer active.');
 
   const cutoff = cutoffFor(rec.date, rec.mealType, policy);
-  if (new Date(nowIso) > cutoff) {
+  if (new Date(nowIso) >= cutoff) {
     return fail(`The cancellation deadline for this meal passed on ${cutoff.toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: 'numeric', minute: '2-digit' })}.`);
   }
 

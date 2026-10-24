@@ -50,6 +50,7 @@ export const api = {
   },
 
   auth: {
+    resetPassword: (data) => request('/auth/reset-password', { method: 'POST', body: JSON.stringify(data) }),
     login: (phoneOrCreds, password, countryCode = '+91') => {
       const body = typeof phoneOrCreds === 'object'
         ? phoneOrCreds
@@ -57,19 +58,20 @@ export const api = {
       return request('/auth/login', { method: 'POST', body: JSON.stringify(body) });
     },
     register: (userData) => request('/auth/register', { method: 'POST', body: JSON.stringify(userData) }),
-    demo: (role, email, phone) => request('/auth/demo', { method: 'POST', body: JSON.stringify({ role, email, phone }) }),
     me: () => request('/auth/me'),
   },
 
   admin: {
+    resetCustomerPassword: (id, data) => request(`/admin/users/${id}/reset-password`, { method: 'POST', body: JSON.stringify(data) }),
     getState:    () => request('/admin/state'),
     getDashboard: () => request('/admin/dashboard'),
     getUsers:    (search) => request(`/admin/users${search ? `?search=${encodeURIComponent(search)}` : ''}`),
     createUser:  (data) => request('/admin/users', { method: 'POST', body: JSON.stringify(data) }),
     allocate:    (input) => request('/admin/subscriptions/allocate', { method: 'POST', body: JSON.stringify(input) }),
     adjust:      (id, input) => request(`/admin/subscriptions/${id}/adjust`, { method: 'POST', body: JSON.stringify(input) }),
-    renew:       (id) => request(`/admin/subscriptions/${id}/renew`, { method: 'POST' }),
-    cancel:      (id) => request(`/admin/subscriptions/${id}/cancel`, { method: 'POST' }),
+    renew:       (id, opId) => request(`/admin/subscriptions/${id}/renew`, { method: 'POST', body: JSON.stringify({ opId }) }),
+    cancel:      (id, opId) => request(`/admin/subscriptions/${id}/cancel`, { method: 'POST', body: JSON.stringify({ opId }) }),
+    consume: (id, opId) => request(`/admin/meals/${id}/consume`, { method: 'POST', body: JSON.stringify({ opId }) }),
     // Delivery workflow
     getMealSummary:    (date) => request(`/admin/meals/summary?date=${date}`),
     getMealDeliveries: (date, mealType) => request(`/admin/meals/deliveries?date=${date}&mealType=${mealType}`),
@@ -79,7 +81,7 @@ export const api = {
     getDashboard:   () => request('/user/dashboard'),
     getTodaysMeals: () => request('/user/meals/today'),
     getRecentMeals: (limit = 8) => request(`/user/meals/recent?limit=${limit}`),
-    cancelMeal:     (recordId) => request(`/user/meals/${recordId}/cancel`, { method: 'POST' }),
+    cancelMeal:     (recordId, opId) => request(`/user/meals/${recordId}/cancel`, { method: 'POST', body: JSON.stringify({ opId }) }),
     updateAddress:  (address) => request('/user/me/address', { method: 'PATCH', body: JSON.stringify({ address }) }),
     getMe:          () => request('/user/me'),
   },

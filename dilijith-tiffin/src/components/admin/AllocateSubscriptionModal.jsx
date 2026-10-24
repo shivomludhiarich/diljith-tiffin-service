@@ -26,11 +26,6 @@ export default function AllocateSubscriptionModal({ presetUserId = '', onClose }
   const [conflicts, setConflicts] = useState(null); // [{ sub, overlappingMeals }] when needsConfirm
   const [form, setForm] = useState({ userId: presetUserId, durationMonths: 1, mealTypes: ['lunch'], startDate: today, allocatedMeals: '' });
 
-  // Ensure latest registered users from MongoDB are loaded
-  useState(() => {
-    if (refreshFromBackend) refreshFromBackend();
-  });
-
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
   const suggested = defaultEntitlement(form.durationMonths, form.mealTypes, daysForMonths);
   const allocatedMeals = mealsTouched ? form.allocatedMeals : String(suggested || '');
@@ -42,7 +37,7 @@ export default function AllocateSubscriptionModal({ presetUserId = '', onClose }
   const endDate = isValidDateStr(form.startDate) ? endDateFor(form.startDate, form.durationMonths) : null;
 
   const toggleMeal = (key) => {
-    set({ mealTypes: form.mealTypes.includes(key) ? form.mealTypes.filter((m) => m !== key) : [...form.mealTypes, key] });
+    set({ mealTypes: [key] });
     // Reset any conflict state when meal selection changes
     setConflicts(null);
     setConfirmReplace(false);
@@ -52,10 +47,11 @@ export default function AllocateSubscriptionModal({ presetUserId = '', onClose }
   const submit = async (e) => {
     e.preventDefault();
     if (busy) return;
+    if (!String(allocatedMeals).trim()) { setErrors({ allocatedMeals: 'Enter an explicit credit quantity.' }); return; }
     setBusy(true);
     try {
       const result = await allocate({
-        ...form, allocatedMeals, confirmReplace, demoPrice: plan?.total ?? null, opId: opId.current,
+        ...form, mealAllocations: { [form.mealTypes[0]]: Number(allocatedMeals) }, confirmReplace, demoPrice: plan?.total ?? null, opId: opId.current,
       });
       if (result.ok) {
         const targetUser = customers.find((u) => u.id === form.userId);
@@ -70,7 +66,7 @@ export default function AllocateSubscriptionModal({ presetUserId = '', onClose }
         setErrors({});
       } else {
         setConflicts(null);
-        setErrors(result.errors || {});
+        setErrors(result.errors || { form: result.message || 'Allocation could not be saved.' });
       }
     } catch (err) {
       setErrors({ form: err.message || 'Failed to allocate subscription.' });
@@ -130,7 +126,7 @@ export default function AllocateSubscriptionModal({ presetUserId = '', onClose }
               <input type="checkbox" className="mt-1 h-4 w-4 accent-brand" checked={confirmReplace} onChange={(e) => setConfirmReplace(e.target.checked)} />
               <span>
                 Replace the conflicting subscription{conflictSubIds.length > 1 ? 's' : ''} ({conflictSubIds.join(', ')}).
-                Their future meals will be cancelled and their history will be kept.
+                All meal types and unused credits on these subscriptions will become unavailable. Their future meals will be cancelled and their history kept.
                 All other active meal allocations remain untouched.
               </span>
             </label>
@@ -151,7 +147,7 @@ export default function AllocateSubscriptionModal({ presetUserId = '', onClose }
         </fieldset>
 
         <fieldset>
-          <legend className="mb-1 text-sm font-semibold">Meal types</legend>
+          <legend className="mb-1 text-sm font-semibold">Meal type (one per allocation)</legend>
           <div className="grid grid-cols-3 gap-2">
             {MEAL_KEYS.map((k) => {
               const on = form.mealTypes.includes(k);
@@ -174,8 +170,8 @@ export default function AllocateSubscriptionModal({ presetUserId = '', onClose }
             <p className="mt-1 text-xs text-muted">Ends on {endDate ? formatDate(endDate) : '-'}</p>
           </div>
           <div>
-            <label htmlFor="alloc-meals" className="mb-1 block text-sm font-semibold">Meal entitlement</label>
-            <input id="alloc-meals" type="number" min="1" step="1" inputMode="numeric" className="field" value={allocatedMeals}
+            <label htmlFor="alloc-meals" className="mb-1 block text-sm font-semibold">{mealLabel(form.mealTypes[0])} credits</label>
+            <input id="alloc-meals" type="number" min="0" step="1" inputMode="numeric" className="field" value={allocatedMeals}
               onChange={(e) => { setMealsTouched(true); set({ allocatedMeals: e.target.value }); }} />
             <Err>{errors.allocatedMeals}</Err>
             <p className="mt-1 text-xs text-muted">Suggested: {suggested} ({daysForMonths(form.durationMonths)} days x {form.mealTypes.length} meal{form.mealTypes.length === 1 ? '' : 's'})</p>

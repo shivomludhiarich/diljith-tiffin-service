@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Coffee, Moon, Sun } from 'lucide-react';
 import StatCard from '../../components/admin/StatCard';
 import ConfirmDialog from '../../components/admin/ConfirmDialog';
@@ -10,11 +10,11 @@ import RecentMeals from '../../components/dashboard/RecentMeals';
 import WhatsAppButton from '../../components/dashboard/WhatsAppButton';
 import AddressEditor from '../../components/dashboard/AddressEditor';
 import { useAuth } from '../../context/AuthContext';
-import { useAdminData } from '../../context/AdminDataContext';
+import { api } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import useNow from '../../hooks/useNow';
 import { mealLabel, uid } from '../../utils/adminLogic';
-import { planDetails, recentMealActivity, todaysMeals, userSummary } from '../../utils/userLogic';
+import { planDetails } from '../../utils/userLogic';
 import { renewalMessage } from '../../utils/whatsapp';
 import { diffDays, formatDate, todayStr } from '../../utils/dates';
 
@@ -22,7 +22,7 @@ const MEAL_ICONS = { breakfast: Coffee, lunch: Sun, dinner: Moon };
 const MEAL_COLORS = { breakfast: 'text-amber', lunch: 'text-leaf', dinner: 'text-brand' };
 
 /** Compact per-meal credit badge shown inside the meal-credit breakdown section. */
-function MealCreditBadge({ mealType, credit }) {
+export function MealCreditBadge({ mealType, credit }) {
   const Icon = MEAL_ICONS[mealType];
   const color = MEAL_COLORS[mealType] ?? 'text-muted';
   return (
@@ -31,7 +31,7 @@ function MealCreditBadge({ mealType, credit }) {
         <Icon className={`h-5 w-5 ${color}`} aria-hidden="true" />
         <span className="text-sm font-semibold">{mealLabel(mealType)}</span>
       </div>
-      {credit ? (
+      {credit?.requiresReview ? <p role="alert">Allocation requires review</p> : credit ? (
         <dl className="mt-2 grid grid-cols-3 gap-2 text-center">
           <div>
             <dt className="text-xs text-muted">Allocated</dt>
@@ -55,14 +55,30 @@ function MealCreditBadge({ mealType, credit }) {
 
 export default function UserDashboard() {
   const { user } = useAuth();
-  const { state, cancelMeal } = useAdminData();
+
   const { notify } = useToast();
   const now = useNow();
   const today = todayStr(now);
 
-  const summary = useMemo(() => userSummary(state, user.id, today), [state, user.id, today]);
-  const meals = useMemo(() => todaysMeals(state, user.id, today, now), [state, user.id, today, now]);
-  const recent = useMemo(() => recentMealActivity(state, user.id, today, 8), [state, user.id, today]);
+  const generation = useRef(0);
+  const [data, setData] = useState(null);
+  const [loadError, setLoadError] = useState('');
+  const refresh = useCallback(async () => {
+    const current = ++generation.current;
+    setLoadError('');
+    try {
+      const [dashboard, meals, recent] = await Promise.all([api.user.getDashboard(), api.user.getTodaysMeals(), api.user.getRecentMeals()]);
+      if (!dashboard.ok || !meals.ok || !recent.ok) throw new Error('Invalid balance response.');
+      if (current !== generation.current) return false;
+      setData({ summary: dashboard.summary, meals: meals.meals, recent: recent.meals });
+      return true;
+    } catch (err) { if (current === generation.current) { setLoadError(err.message); setData(null); } return false; }
+  }, [user.id, today]);
+  useEffect(() => {
+    setData(null);
+    refresh();
+    return () => { generation.current++; };
+  }, [refresh]);
 
   const [pending, setPending] = useState(null); // { meal, entry }
   const [busy, setBusy] = useState(false);
@@ -73,14 +89,19 @@ export default function UserDashboard() {
     if (busy || !pending) return;
     setBusy(true);
     try {
-      const result = await cancelMeal(user.id, pending.entry.id, opId.current);
+      const result = await api.user.cancelMeal(pending.entry.id, opId.current);
       notify(result.ok ? `${mealLabel(pending.meal.mealType)} cancelled. Your credit was kept.` : result.errors?.form ?? 'Could not cancel this meal.', result.ok ? 'success' : 'error');
+      if (result.ok) await refresh();
       setPending(null);
+    } catch (err) { notify(err.message, 'error');
     } finally {
       setBusy(false);
     }
   };
 
+  if (loadError) return <div className="container-x py-10" role="alert">Balances could not be refreshed: {loadError} <button onClick={refresh}>Try again</button></div>;
+  if (!data) return <p className="container-x py-10" role="status">Loading meal balances?</p>;
+  const { summary, meals, recent } = data;
   const { running, past, stats, mealCredits, nearestExpiry, overallStatus, expiring } = summary;
   const firstName = (user.name || 'there').split(' ')[0];
   const daysToExpiry = nearestExpiry ? diffDays(nearestExpiry, today) : null;
@@ -89,11 +110,11 @@ export default function UserDashboard() {
 
   // Build a summary line using per-meal balances where available
   const mealSummaryParts = ['breakfast', 'lunch', 'dinner']
-    .filter((m) => mealCredits[m])
+    .filter((m) => mealCredits[m] && !mealCredits[m].requiresReview)
     .map((m) => `${mealCredits[m].remaining} ${mealLabel(m)}`);
   const mealSummaryText = mealSummaryParts.length
     ? `${mealSummaryParts.join(', ')} remaining`
-    : `${stats.remaining} meal${stats.remaining === 1 ? '' : 's'} remaining`;
+    : `${stats.remaining ?? "Unverified"} meal${stats.remaining === 1 ? '' : 's'} remaining`;
 
   return (
     <div className="container-x py-10">
@@ -122,8 +143,8 @@ export default function UserDashboard() {
       ) : (
         <>
           <section aria-label="Summary" className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <StatCard label="Meals remaining" value={stats.remaining} tone="green" hint="Total remaining across all active plans" />
-            <StatCard label="Meals consumed" value={stats.consumed} hint="On your active plans" />
+            <StatCard label="Meals remaining" value={stats.remaining ?? "Review required"} tone="green" hint="Total remaining across all active plans" />
+            <StatCard label="Meals consumed" value={stats.consumed ?? "Review required"} hint="On your active plans" />
             <StatCard label="Meals cancelled" value={stats.cancelled} hint="Cancelled by you in time, credit kept" />
             <StatCard label="Active subscriptions" value={stats.activeSubscriptions} hint="Expired plans are not counted" />
           </section>

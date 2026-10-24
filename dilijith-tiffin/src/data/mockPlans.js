@@ -9,9 +9,9 @@
 export const DEFAULT_PRICING = {
   currency: 'INR',
   meals: {
-    breakfast: { label: 'Breakfast', price: 50, available: true },
-    lunch: { label: 'Lunch', price: 90, available: true },
-    dinner: { label: 'Dinner', price: 80, available: true },
+    breakfast: { label: 'Breakfast', price: 150, available: true },
+    lunch: { label: 'Lunch', price: 150, available: true },
+    dinner: { label: 'Dinner', price: 150, available: true },
   },
   // keys = number of meals selected, values = % off the daily total
   comboDiscounts: { 1: 0, 2: 5, 3: 8 },
