@@ -21,6 +21,7 @@ Configure these in Vercel project settings, separately for each environment:
 | --- | --- |
 | `MONGODB_URI` | Server-only MongoDB connection string |
 | `MONGODB_DB_NAME` | Existing database name; defaults to `dilijith_tiffin` |
+| `CRON_SECRET` | Random server-only secret of at least 32 characters for automatic consumption jobs |
 | `JWT_SECRET` | Random secret of at least 32 characters; placeholders rejected |
 | `ALLOWED_ORIGIN` | Exact HTTPS frontend origin, without a trailing slash |
 | `VITE_API_URL` | `/api`, or leave unset; never use localhost in production |
@@ -96,3 +97,5 @@ Existing Mongoose `new` option deprecation warnings remain. The lockfile was
 refreshed using npm with scripts disabled to restore Linux optional build
 dependencies needed on Vercel. The function tests were rerun after final error
 handling edits and passed.
+
+Automatic cutoff accounting and scheduler timing limitations are documented in [AUTOMATIC_MEALS.md](AUTOMATIC_MEALS.md).

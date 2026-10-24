@@ -80,6 +80,18 @@ export default function UserDashboard() {
     return () => { generation.current++; };
   }, [refresh]);
 
+  const lastDeadlineRefresh = useRef('');
+  useEffect(() => {
+    if (!data) return;
+    const due = [...data.meals, ...data.tomorrow]
+      .filter(meal => new Date(meal.cutoff) <= now && meal.entries.some(entry => entry.status === 'Scheduled'))
+      .map(meal => `${meal.date}:${meal.mealType}`).sort().join('|');
+    if (due && due !== lastDeadlineRefresh.current) {
+      lastDeadlineRefresh.current = due;
+      refresh();
+    }
+  }, [data, now, refresh]);
+
   const [pending, setPending] = useState(null); // { meal, entry }
   const [busy, setBusy] = useState(false);
   const opId = useRef(null);

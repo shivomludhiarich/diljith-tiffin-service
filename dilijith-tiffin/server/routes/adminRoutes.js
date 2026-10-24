@@ -1,3 +1,4 @@
+import { reconcileMeals } from '../services/automaticConsumption.js';
 import { allocateSubscription, adjustCredits, renewSubscription, cancelSubscription, consumeMeal } from '../controllers/creditController.js';
 import express from 'express';
 import { initiateCustomerReset } from '../controllers/passwordResetController.js';
@@ -14,6 +15,7 @@ import { protect, adminOnly } from '../middleware/auth.js';
 const router = express.Router();
 
 router.use(protect, adminOnly);
+router.use(reconcileMeals);
 
 router.get('/state', getAdminState);
 router.get('/dashboard', getDashboardMetrics);

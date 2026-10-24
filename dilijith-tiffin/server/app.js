@@ -1,3 +1,4 @@
+import cronRoutes from './routes/cronRoutes.js';
 import express from 'express';
 import { requireSameOrigin } from './middleware/sessionCookie.js';
 import cors from 'cors';
@@ -40,6 +41,7 @@ app.use(express.json());
 
 // API Routes
 app.use('/api/health', healthRoutes);
+app.use('/api/cron', cronRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/user', userRoutes);

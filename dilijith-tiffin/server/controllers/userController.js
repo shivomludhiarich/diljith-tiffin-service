@@ -169,7 +169,7 @@ export async function getRecentMealActivity(req, res) {
     const today = todayStr();
     const limit = Number(req.query.limit) || 8;
 
-    const meals = await MealRecord.find({ user: userId, date: { $lte: today } })
+    const meals = await MealRecord.find({ user: userId, date: { $lte: today }, status: { $in: ['Consumed', 'Cancelled'] } })
       .sort({ date: -1, createdAt: -1 })
       .limit(limit);
 

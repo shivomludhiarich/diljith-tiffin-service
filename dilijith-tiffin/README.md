@@ -2,6 +2,8 @@
 
 Full-stack MERN application for Dilijith Tiffin Service with React + Vite frontend, Express + Node.js backend, and persistent MongoDB database storage.
 
+For automatic consumption at cancellation cutoffs and required scheduler setup, see [AUTOMATIC_MEALS.md](AUTOMATIC_MEALS.md).
+
 For the single-project Vercel setup, environment settings and deployment checks, see [VERCEL_DEPLOYMENT.md](VERCEL_DEPLOYMENT.md).
 
 ---

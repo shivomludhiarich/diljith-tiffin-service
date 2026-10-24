@@ -4,7 +4,7 @@ import SectionHeading from '../common/SectionHeading';
 
 const FAQS = [
   {
-    q: 'What type of food does Dilijith Tiffin Service provide?',
+    q: 'What type of food does Diljit Tiffin Service provide?',
     a: 'We specialize in authentic North Indian food prepared fresh for wholesome everyday dining, cooked using high-quality ingredients and traditional recipes.',
   },
   {

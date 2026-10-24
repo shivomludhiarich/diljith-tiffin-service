@@ -26,7 +26,7 @@ function PrepCard({ mealKey, label, icon: Icon, iconColor, count, onClick, loadi
       type="button"
       onClick={onClick}
       className="group flex w-full items-center justify-between rounded-xl border border-line bg-white p-5 text-left transition-all hover:border-brand/50 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
-      aria-label={`View ${label} delivery list: ${count} scheduled`}
+      aria-label={`View ${label} delivery list: ${count} meals`}
     >
       <div className="flex items-center gap-3">
         <Icon className={`h-6 w-6 ${iconColor}`} aria-hidden="true" />
@@ -76,13 +76,12 @@ export default function AdminDashboard() {
   }, []);
 
   // Load meal summary for the selected date
-  const loadSummary = useCallback(async (date) => {
-    setSummaryLoading(true);
-    setSummary(null);
+  const loadSummary = useCallback(async (date, background = false) => {
+    if (!background) { setSummaryLoading(true); setSummary(null); }
     try {
       const res = await api.admin.getMealSummary(date);
       if (res?.ok) setSummary(res.prep);
-    } catch { setSummary(null); }
+    } catch { if (!background) setSummary(null); }
     finally { setSummaryLoading(false); }
   }, []);
 

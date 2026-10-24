@@ -1,3 +1,4 @@
+import { reconcileMeals } from '../services/automaticConsumption.js';
 import express from 'express';
 import {
   getUserDashboard,
@@ -11,6 +12,7 @@ import { protect } from '../middleware/auth.js';
 const router = express.Router();
 
 router.use(protect);
+router.use(reconcileMeals);
 
 router.get('/dashboard', getUserDashboard);
 router.get('/meals/today', getTodaysMeals);

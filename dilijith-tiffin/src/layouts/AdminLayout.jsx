@@ -29,7 +29,7 @@ function SidebarContent({ onNavigate }) {
       <div className="flex items-center gap-3 px-2">
         <Logo className="h-12 w-12 rounded-xl" />
         <div className="min-w-0 leading-tight">
-          <p className="truncate font-display text-lg font-bold">Dilijith Tiffin</p>
+          <p className="truncate font-display text-lg font-bold">Diljit Tiffin</p>
           <p className="text-xs font-semibold text-muted">Admin portal</p>
         </div>
       </div>
@@ -49,7 +49,7 @@ function SidebarContent({ onNavigate }) {
       </nav>
 
       <div className="border-t border-line pt-4">
-        <p className="truncate px-3 pb-2 text-xs text-muted">{user?.name ?? 'Dilijith Admin'}</p>
+        <p className="truncate px-3 pb-2 text-xs text-muted">{user?.name ?? 'Diljit Admin'}</p>
         <button onClick={signOut} className="flex h-11 w-full items-center gap-3 rounded-lg px-3 text-sm font-bold text-danger transition-colors hover:bg-bg2">
           <LogOut className="h-5 w-5" aria-hidden="true" />Logout
         </button>

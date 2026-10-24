@@ -8,13 +8,13 @@ const defaultMessage = 'Hi! I would like to know more about Diljit Tiffin Servic
 const whatsappUrl = buildWhatsappUrl(whatsappNum, defaultMessage);
 
 export const BRAND = {
-  name: 'Dilijith Tiffin Service',
+  name: 'Diljit Tiffin Service',
   tagline: 'Authentic North Indian food, delivered fresh',
   logo,
   contact: {
     phone: '86994 76361',
-    email: 'contact@dilijithtiffin.com',
-    address: 'Indiranagar, Bengaluru, Karnataka 560038',
+    email: 'rajwinderra1998@gmail.com',
+    address: 'MIT gate Number 8 near chai chownki, Manipal',
   },
   whatsappNumber: whatsappNum,
   whatsappMessage: defaultMessage,

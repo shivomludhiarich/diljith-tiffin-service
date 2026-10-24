@@ -1,7 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Phone, MapPin, AlertTriangle, Search, X, Loader2, Users, Package, Coffee, Sun, Moon } from 'lucide-react';
 import Drawer from './Drawer';
-import { useAdminData } from '../../context/AdminDataContext';
 import { api } from '../../services/api';
 import { formatDate } from '../../utils/dates';
 
@@ -21,7 +20,7 @@ function formatAddress(address) {
   return parts.join(', ');
 }
 
-function DeliveryCard({ entry, index, onDelivered, busy }) {
+function DeliveryCard({ entry, index }) {
   const addrText = formatAddress(entry.address);
   return (
     <li className={`rounded-xl border p-4 ${!entry.hasAddress ? 'border-accent/60 bg-accent/5' : 'border-line bg-white'}`}>
@@ -40,7 +39,7 @@ function DeliveryCard({ entry, index, onDelivered, busy }) {
         )}
       </div>
 
-      <button className="mt-3 rounded-lg bg-brand px-3 py-2 text-white" disabled={busy} onClick={() => onDelivered(entry)}>Confirm delivered</button>
+      <p className="mt-3 text-xs text-muted">Uncancelled meals count as consumed after the cancellation deadline.</p>
       {/* Phone */}
       <a
         href={`tel:${entry.phone}`}
@@ -67,43 +66,35 @@ function DeliveryCard({ entry, index, onDelivered, busy }) {
 }
 
 export default function DeliveryDrawer({ open, onClose, mealType, date }) {
-  const { refreshFromBackend } = useAdminData();
-  const [delivering, setDelivering] = useState(false);
+  const generation = useRef(0);
   const [data, setData]       = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState('');
   const [search, setSearch]   = useState('');
 
-  const load = useCallback(async () => {
+  const load = useCallback(async ({ background = false } = {}) => {
     if (!mealType || !date) return;
-    setLoading(true);
+    const current = ++generation.current;
+    if (!background) setLoading(true);
     setError('');
     try {
       const res = await api.admin.getMealDeliveries(date, mealType);
+      if (current !== generation.current) return;
       if (res?.ok) setData(res);
       else setError(res?.message || 'Failed to load deliveries.');
     } catch (err) {
-      setError(err.message || 'Failed to load deliveries.');
+      if (current === generation.current) setError(err.message || 'Failed to load deliveries.');
     } finally {
-      setLoading(false);
+      if (current === generation.current) setLoading(false);
     }
   }, [mealType, date]);
 
   useEffect(() => {
     if (open) { setSearch(''); load(); }
     else       { setData(null); setError(''); }
+    return () => { generation.current++; };
   }, [open, load]);
 
-  const delivered = async entry => {
-    if (delivering) return;
-    setDelivering(true);
-    try {
-      for (const id of entry.recordIds) await api.admin.consume(id, `delivery-${id}`);
-      await load();
-      if (!await refreshFromBackend()) setError('Delivery saved, but balances could not be refreshed.');
-    } catch (err) { setError(err.message); }
-    finally { setDelivering(false); }
-  };
   const Icon = mealType ? MEAL_ICONS[mealType] : null;
   const iconColor = mealType ? MEAL_COLORS[mealType] : '';
   const label = mealType ? mealType.charAt(0).toUpperCase() + mealType.slice(1) : '';
@@ -137,7 +128,7 @@ export default function DeliveryDrawer({ open, onClose, mealType, date }) {
       {/* Error */}
       {!loading && error && (
         <div className="rounded-xl border border-danger/20 bg-danger/5 p-4 text-sm text-danger">
-          <p className="font-semibold">Could not load delivery list</p>
+          <p className="font-semibold">Delivery update needs attention</p>
           <p className="mt-1">{error}</p>
           <button onClick={load} className="mt-3 text-xs font-bold text-danger underline">
             Try again
@@ -146,7 +137,7 @@ export default function DeliveryDrawer({ open, onClose, mealType, date }) {
       )}
 
       {/* Data */}
-      {!loading && !error && data && (
+      {!loading && data && (
         <>
           {/* Summary strip */}
           <div className="grid grid-cols-2 gap-3">
@@ -204,13 +195,13 @@ export default function DeliveryDrawer({ open, onClose, mealType, date }) {
           {filtered.length === 0 ? (
             <div className="rounded-xl border border-line bg-bg2 p-8 text-center text-sm text-muted">
               {data.customerCount === 0
-                ? `No ${label.toLowerCase()} deliveries scheduled for this date.`
+                ? `No ${label.toLowerCase()} deliveries for this date.`
                 : 'No results match your search.'}
             </div>
           ) : (
             <ul className="space-y-3">
               {filtered.map((entry, i) => (
-                <DeliveryCard key={entry.userId} entry={entry} index={i} onDelivered={delivered} busy={delivering} />
+                <DeliveryCard key={entry.userId} entry={entry} index={i} />
               ))}
             </ul>
           )}

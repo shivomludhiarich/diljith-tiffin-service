@@ -12,17 +12,17 @@ export function AdminDataProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const generation = useRef(0);
-  const refreshFromBackend = useCallback(async () => {
+  const refreshFromBackend = useCallback(async ({ background = false } = {}) => {
     const current = ++generation.current;
     if (role !== 'admin') { setState(empty()); setLoading(false); return null; }
-    setLoading(true); setError('');
+    if (!background) { setLoading(true); setError(''); }
     try {
       const res = await api.admin.getState();
       if (!res.ok || !res.state) throw new Error('Could not refresh balances.');
       if (current === generation.current) setState(res.state);
       return res.state;
     } catch (err) {
-      if (current === generation.current) { setState(empty()); setError(err.message); }
+      if (current === generation.current && !background) { setState(empty()); setError(err.message); }
       return null;
     } finally { if (current === generation.current) setLoading(false); }
   }, [role, user?.id]);

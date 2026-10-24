@@ -1,5 +1,5 @@
 /**
- * Standard phone utilities for Dilijith Tiffin Service.
+ * Standard phone utilities for Diljit Tiffin Service.
  * Default country: India (+91)
  */
 

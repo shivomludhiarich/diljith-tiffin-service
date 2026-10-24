@@ -175,7 +175,7 @@ export default function Register() {
       }
 
       setIsSuccess(true);
-      notify('Account created successfully! Welcome to Dilijith Tiffin Service.', 'success');
+      notify('Account created successfully! Welcome to Diljit Tiffin Service.', 'success');
       setTimeout(() => navigate('/user/dashboard', { replace: true }), 1200);
     } catch (err) {
       setGeneralError(err.message || 'An unexpected error occurred.');

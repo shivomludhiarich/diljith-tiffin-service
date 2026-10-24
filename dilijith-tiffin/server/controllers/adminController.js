@@ -238,7 +238,7 @@ export async function getDashboardMetrics(req, res) {
     const [totalUsers, allSubs, mealsTodayScheduled, mealsTodayCancelled, recentActivities] = await Promise.all([
       User.countDocuments({ role: { $ne: 'admin' } }),
       Subscription.find(),
-      MealRecord.countDocuments({ date: today, status: 'Scheduled' }),
+      MealRecord.countDocuments({ date: today, status: { $in: ['Scheduled', 'Consumed'] } }),
       MealRecord.countDocuments({ date: today, status: 'Cancelled' }),
       Activity.find().sort({ createdAt: -1 }).limit(8),
     ]);
@@ -257,7 +257,7 @@ export async function getDashboardMetrics(req, res) {
       prep[mealType] = await MealRecord.countDocuments({
         date: today,
         mealType,
-        status: 'Scheduled',
+        status: { $in: ['Scheduled', 'Consumed'] },
       });
     }
 
@@ -296,7 +296,7 @@ export async function getMealSummary(req, res) {
 
     const counts = await Promise.all(
       MEAL_KEYS.map(async (mealType) => {
-        const count = await MealRecord.countDocuments({ date: targetDate, mealType, status: 'Scheduled' });
+        const count = await MealRecord.countDocuments({ date: targetDate, mealType, status: { $in: ['Scheduled', 'Consumed'] } });
         return [mealType, count];
       })
     );
@@ -325,7 +325,7 @@ export async function getMealDeliveries(req, res) {
     }
 
     // Fetch scheduled meals for this date + mealType, populate only needed user fields
-    const records = await MealRecord.find({ date: targetDate, mealType, status: 'Scheduled' })
+    const records = await MealRecord.find({ date: targetDate, mealType, status: { $in: ['Scheduled', 'Consumed'] } })
       .populate('user', 'name phone address status')
       .sort({ createdAt: 1 });
 

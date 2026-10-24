@@ -61,6 +61,8 @@ async function runTests() {
     // 1. Backend connects to existing MongoDB database
     console.log('\n[Scenario 1] Database Connection');
     await connectDB();
+  // Legacy explicit-consumption fixtures predate the automatic-accounting activation.
+  await mongoose.connection.db.collection('mealaccountingpolicies').updateOne({ _id: 'automatic-consumption-v1' }, { $set: { activatedAt: new Date('2099-01-01') } }, { upsert: true });
     assert(isDbConnected(), 'Backend connects to MongoDB database successfully');
 
     // 2. Health check reports connectivity

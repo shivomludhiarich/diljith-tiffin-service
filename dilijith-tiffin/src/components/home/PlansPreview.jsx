@@ -28,7 +28,7 @@ export default function PlansPreview() {
             </div>
             <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer"
               className="inline-flex h-12 shrink-0 items-center gap-2 rounded-full bg-brand px-6 text-sm font-bold text-white shadow-md transition-all hover:bg-brand/90 hover:shadow-lg"
-              aria-label="Chat with Dilijith Tiffin Service on WhatsApp (opens in new tab)">
+              aria-label="Chat with Diljit Tiffin Service on WhatsApp (opens in new tab)">
               <MessageCircle className="h-5 w-5" aria-hidden="true" />
               <span>Message Us on WhatsApp</span>
             </a>

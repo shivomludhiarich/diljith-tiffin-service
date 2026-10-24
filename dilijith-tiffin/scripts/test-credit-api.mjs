@@ -13,6 +13,8 @@ let server;
 try {
   await mongoose.connect(repl.getUri(), { dbName: 'dts_test_credit_api' });
   const { default: app } = await import('../server/app.js');
+  // Legacy explicit-consumption fixtures predate the automatic-accounting activation.
+  await mongoose.connection.db.collection('mealaccountingpolicies').updateOne({ _id: 'automatic-consumption-v1' }, { $set: { activatedAt: new Date('2099-01-01') } }, { upsert: true });
   const { generateToken } = await import('../server/middleware/auth.js');
   const { default: User } = await import('../server/models/User.js');
   const { default: Subscription } = await import('../server/models/Subscription.js');

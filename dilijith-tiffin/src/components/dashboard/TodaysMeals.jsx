@@ -12,7 +12,7 @@ function Entry({ meal, entry, showPlan, onCancel }) {
   return (
     <div className="mt-3 border-t border-line pt-3">
       <div className="flex items-center justify-between gap-2">
-        <StatusBadge status={entry.status} />
+        {entry.status !== 'Scheduled' && <StatusBadge status={entry.status} />}
         {showPlan && <span className="text-xs text-muted">{entry.subscriptionId}</span>}
       </div>
 
@@ -21,7 +21,7 @@ function Entry({ meal, entry, showPlan, onCancel }) {
           <p id={reasonId} className="mt-2 text-xs text-muted">
             {entry.cancellable
               ? `You can cancel until ${fmt(meal.cutoff)}. Your credit stays with your plan.`
-              : `Cancellation closed on ${fmt(meal.cutoff)}, so this meal can no longer be cancelled.`}
+              : `Cancellation closed on ${fmt(meal.cutoff)}, this meal counts as consumed once accounting updates.`}
           </p>
           <Button variant={entry.cancellable ? 'outline' : 'ghost'} className="mt-3 h-10 w-full" disabled={!entry.cancellable}
             aria-describedby={reasonId} onClick={() => onCancel(meal, entry)}>
@@ -32,7 +32,7 @@ function Entry({ meal, entry, showPlan, onCancel }) {
       {entry.status === 'Cancelled' && (
         <p className="mt-2 text-xs text-muted">{entry.cancelledAt ? `Cancelled on ${fmtTime(entry.cancelledAt)}. Your credit was kept.` : 'Cancelled. Your credit was kept.'}</p>
       )}
-      {entry.status === 'Consumed' && <p className="mt-2 text-xs text-muted">Delivered. This meal used one credit.</p>}
+      {entry.status === 'Consumed' && <p className="mt-2 text-xs text-muted">Cancellation deadline passed. This meal used one credit.</p>}
     </div>
   );
 }
