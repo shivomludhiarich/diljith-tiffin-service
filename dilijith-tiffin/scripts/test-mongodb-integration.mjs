@@ -27,12 +27,12 @@ async function request(path, options = {}) {
   const res = await fetch(`${baseUrl}${path}`, {
     ...options,
     headers: {
-      'Content-Type': 'application/json',
+      Origin: 'http://localhost:5173', 'Content-Type': 'application/json',
       ...(options.headers || {}),
     },
   });
   const data = await res.json().catch(() => ({}));
-  return { status: res.status, ok: res.ok, data };
+  return { status: res.status, ok: res.ok, data, session: res.headers.get('set-cookie')?.split(';')[0].split('=')[1] };
 }
 
 let passed = 0;
@@ -82,7 +82,7 @@ async function runTests() {
         address: { houseOrFlat: '1', street: 'Test Road', city: 'Test City', state: 'Test State', postalCode: '110001' },
       }),
     });
-    assert(regRes.status === 201 && !!regRes.data.token, 'User registration creates user and returns JWT token');
+    assert(regRes.status === 201 && !!regRes.session, 'User registration creates user and sets a session cookie');
 
     const loginRes = await request('/auth/login', {
       method: 'POST',
@@ -91,7 +91,7 @@ async function runTests() {
         password: 'Password@123',
       }),
     });
-    assert(loginRes.status === 200 && !!loginRes.data.token, 'User login succeeds with correct password');
+    assert(loginRes.status === 200 && !!loginRes.session, 'User login succeeds with correct password');
 
     const wrongLoginRes = await request('/auth/login', {
       method: 'POST',
@@ -102,13 +102,13 @@ async function runTests() {
     });
     assert(wrongLoginRes.status === 401, 'User login correctly rejects invalid password');
 
-    const userToken = loginRes.data.token;
+    const userToken = loginRes.session;
     const testUserId = loginRes.data.user.id;
 
     // 4. Admin-only endpoints reject ordinary users
     console.log('\n[Scenario 4 & 5] Role-based Access Control & Privacy');
     const adminCheckRes = await request('/admin/users', {
-      headers: { Authorization: `Bearer ${userToken}` },
+      headers: { Cookie: `__Host-dts-session=${userToken}` },
     });
     assert(adminCheckRes.status === 403, 'Admin endpoint rejects regular user with 403 Forbidden');
 
@@ -127,7 +127,7 @@ async function runTests() {
     const adminToken = generateToken(adminUser);
 
     const adminAllowedRes = await request('/admin/users', {
-      headers: { Authorization: `Bearer ${adminToken}` },
+      headers: { Cookie: `__Host-dts-session=${adminToken}` },
     });
     assert(adminAllowedRes.status === 200, 'Admin endpoint allows admin user');
 
@@ -136,7 +136,7 @@ async function runTests() {
     const today = todayStr();
     const allocLunch = await request('/admin/subscriptions/allocate', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${adminToken}` },
+      headers: { Cookie: `__Host-dts-session=${adminToken}` },
       body: JSON.stringify({
         userId: testUserId,
         mealTypes: ['lunch'],
@@ -150,7 +150,7 @@ async function runTests() {
 
     // Verify User Dashboard has 10 lunch credits
     let userDash = await request('/user/dashboard', {
-      headers: { Authorization: `Bearer ${userToken}` },
+      headers: { Cookie: `__Host-dts-session=${userToken}` },
     });
     assert(
       userDash.data.summary.mealCredits.lunch?.remaining === 10 &&
@@ -164,12 +164,12 @@ async function runTests() {
     const yesterday = await MealRecord.create({ user: testUserId, subscription: lunchSubId, mealType: 'lunch', date: addDays(today, -1), accountingVersion: 2 });
     const lunchRecords = [yesterday, await MealRecord.findOne({ subscription: lunchSubId, date: today })];
     for (const rec of lunchRecords) {
-      const consumed = await request(`/admin/meals/${rec._id}/consume`, { method: 'POST', headers: { Authorization: `Bearer ${adminToken}` } });
+      const consumed = await request(`/admin/meals/${rec._id}/consume`, { method: 'POST', headers: { Cookie: `__Host-dts-session=${adminToken}` } });
       assert(consumed.data.ok, 'Delivery API consumes exactly one lunch');
     }
 
     userDash = await request('/user/dashboard', {
-      headers: { Authorization: `Bearer ${userToken}` },
+      headers: { Cookie: `__Host-dts-session=${userToken}` },
     });
     assert(
       userDash.data.summary.mealCredits.lunch?.remaining === 8 &&
@@ -181,7 +181,7 @@ async function runTests() {
     console.log('\n[Scenario 8] Allocate 12 Dinner Credits -> Lunch Remains 8, Dinner is 12');
     const allocDinner = await request('/admin/subscriptions/allocate', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${adminToken}` },
+      headers: { Cookie: `__Host-dts-session=${adminToken}` },
       body: JSON.stringify({
         userId: testUserId,
         mealTypes: ['dinner'],
@@ -193,7 +193,7 @@ async function runTests() {
     assert(allocDinner.status === 201 && allocDinner.data.ok, 'Admin allocates 12 dinner credits without replacing lunch');
 
     userDash = await request('/user/dashboard', {
-      headers: { Authorization: `Bearer ${userToken}` },
+      headers: { Cookie: `__Host-dts-session=${userToken}` },
     });
     assert(
       userDash.data.summary.mealCredits.lunch?.remaining === 8 &&
@@ -205,7 +205,7 @@ async function runTests() {
     console.log('\n[Scenario 9] Independent Breakfast Allocation');
     const allocBreakfast = await request('/admin/subscriptions/allocate', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${adminToken}` },
+      headers: { Cookie: `__Host-dts-session=${adminToken}` },
       body: JSON.stringify({
         userId: testUserId,
         mealTypes: ['breakfast'],
@@ -217,7 +217,7 @@ async function runTests() {
     assert(allocBreakfast.status === 201, 'Admin allocates 15 breakfast credits');
 
     userDash = await request('/user/dashboard', {
-      headers: { Authorization: `Bearer ${userToken}` },
+      headers: { Cookie: `__Host-dts-session=${userToken}` },
     });
     assert(
       userDash.data.summary.mealCredits.breakfast?.remaining === 15 &&
@@ -228,7 +228,7 @@ async function runTests() {
 
     // 10. Repeated consumption requests cannot deduct twice
     console.log('\n[Scenario 10] Prevent Double Deductions & Idempotency');
-    const duplicate = await request(`/admin/meals/${lunchRecords[0]._id}/consume`, { method: 'POST', headers: { Authorization: `Bearer ${adminToken}` } });
+    const duplicate = await request(`/admin/meals/${lunchRecords[0]._id}/consume`, { method: 'POST', headers: { Cookie: `__Host-dts-session=${adminToken}` } });
     assert(duplicate.status === 409, 'Repeated consumption is rejected by the API');
 
     // 11. Permitted cancellations follow policy and preserve credits
@@ -237,13 +237,13 @@ async function runTests() {
     if (dinnerRecord) {
       const cancelRes = await request(`/user/meals/${dinnerRecord._id}/cancel`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${userToken}` },
+        headers: { Cookie: `__Host-dts-session=${userToken}` },
       });
       assert(cancelRes.status === 200 && cancelRes.data.ok, 'User cancels scheduled meal within policy');
 
       // Check balance is still 12 because cancelled meals are NOT counted as consumed
       userDash = await request('/user/dashboard', {
-        headers: { Authorization: `Bearer ${userToken}` },
+        headers: { Cookie: `__Host-dts-session=${userToken}` },
       });
       assert(
         userDash.data.summary.mealCredits.dinner?.remaining === 12,
@@ -255,7 +255,7 @@ async function runTests() {
     console.log('\n[Scenario 12] Credit Adjustment Validation & Negative Balance Protection');
     const negAdjRes = await request(`/admin/subscriptions/${lunchSubId}/adjust`, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${adminToken}` },
+      headers: { Cookie: `__Host-dts-session=${adminToken}` },
       body: JSON.stringify({
         amount: -20, // Only 8 credits remain
         reason: 'Attempt invalid excess reduction',
@@ -265,7 +265,7 @@ async function runTests() {
 
     const validAdjRes = await request(`/admin/subscriptions/${lunchSubId}/adjust`, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${adminToken}` },
+      headers: { Cookie: `__Host-dts-session=${adminToken}` },
       body: JSON.stringify({
         amount: 5,
         reason: 'Customer goodwill bonus',
@@ -274,7 +274,7 @@ async function runTests() {
     assert(validAdjRes.status === 200 && validAdjRes.data.ok, 'Valid credit adjustment (+5) succeeds');
 
     userDash = await request('/user/dashboard', {
-      headers: { Authorization: `Bearer ${userToken}` },
+      headers: { Cookie: `__Host-dts-session=${userToken}` },
     });
     assert(
       userDash.data.summary.mealCredits.lunch?.remaining === 13,

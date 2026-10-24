@@ -16,12 +16,12 @@ async function request(path, options = {}) {
   const res = await fetch(`${baseUrl}${path}`, {
     ...options,
     headers: {
-      'Content-Type': 'application/json',
+      Origin: 'http://localhost:5173', 'Content-Type': 'application/json',
       ...(options.headers || {}),
     },
   });
   const data = await res.json().catch(() => ({}));
-  return { status: res.status, ok: res.ok, data };
+  return { status: res.status, ok: res.ok, data, session: res.headers.get('set-cookie')?.split(';')[0].split('=')[1] };
 }
 
 let passed = 0;
@@ -74,7 +74,7 @@ async function runAuthTests() {
     });
     assert(regRes.status === 201 && regRes.data.ok, 'User successfully registered with 201 Created');
     assert(regRes.data?.user?.phone === `+91${validPhone}`, 'Phone number normalized to +91<digits>');
-    assert(!!regRes.data.token, 'JWT authentication token issued upon registration');
+    assert(!!regRes.session, 'Session cookie issued upon registration');
 
     // 2. Verify password is encrypted and not in plaintext in MongoDB
     console.log('\n[Test 2] Password Hashing & Data Integrity');
@@ -193,9 +193,9 @@ async function runAuthTests() {
     const adminUnauth = await request('/admin/users');
     assert(adminUnauth.status === 401, 'Unauthenticated user rejected from admin routes with 401');
 
-    const userToken = loginSuccess.data.token;
+    const userToken = loginSuccess.session;
     const adminForbidden = await request('/admin/users', {
-      headers: { Authorization: `Bearer ${userToken}` },
+      headers: { Cookie: `__Host-dts-session=${userToken}` },
     });
     assert(adminForbidden.status === 403, 'Regular user rejected from admin routes with 403 Forbidden');
 

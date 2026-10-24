@@ -14,13 +14,13 @@ try {
   server = app.listen(0);
   await new Promise(resolve => server.once('listening', resolve));
   const post = async (route, body) => {
-    const response = await fetch(`http://localhost:${server.address().port}/api/auth/${route}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const response = await fetch(`http://localhost:${server.address().port}/api/auth/${route}`, { method: 'POST', headers: { Origin: 'http://localhost:5173', 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     return { status: response.status, body: await response.json() };
   };
   const { generateToken } = await import('../server/middleware/auth.js');
   const admin = await User.create({ name: 'Admin', phone: '+919876543211', password: 'AdminTest123', role: 'admin' });
   const oldSession = generateToken(user);
-  const createCustomer = async body => fetch(`http://localhost:${server.address().port}/api/admin/users`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${generateToken(admin)}` }, body: JSON.stringify(body) });
+  const createCustomer = async body => fetch(`http://localhost:${server.address().port}/api/admin/users`, { method: 'POST', headers: { Origin: 'http://localhost:5173', 'Content-Type': 'application/json', Cookie: `__Host-dts-session=${generateToken(admin)}` }, body: JSON.stringify(body) });
   const newCustomer = { name: 'Role test', phone: '+919876543212', email: 'role@example.test', role: 'admin' };
   assert.equal((await createCustomer(newCustomer)).status, 400);
   const createdResponse = await createCustomer({ ...newCustomer, password: 'Explicit123!' });
@@ -31,7 +31,7 @@ try {
   const token = randomBytes(32).toString('hex');
   const reference = createHash('sha256').update(token).digest('hex');
   async function approve(id, jwt) {
-    return fetch(`http://localhost:${server.address().port}/api/admin/users/${id}/reset-password`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(jwt ? { Authorization: `Bearer ${jwt}` } : {}) }, body: JSON.stringify({ reference, identityVerified: true, role: 'admin' }) });
+    return fetch(`http://localhost:${server.address().port}/api/admin/users/${id}/reset-password`, { method: 'POST', headers: { Origin: 'http://localhost:5173', 'Content-Type': 'application/json', ...(jwt ? { Cookie: `__Host-dts-session=${jwt}` } : {}) }, body: JSON.stringify({ reference, identityVerified: true, role: 'admin' }) });
   }
   assert.equal((await approve(user.id)).status, 401);
   assert.equal((await approve(user.id, oldSession)).status, 403);
@@ -55,7 +55,7 @@ try {
   assert.equal(updated.role, 'user'); assert.equal(updated.tokenVersion, 1);
   assert.equal(updated.resetTokenHash, undefined); assert.notEqual(updated.password, payload.password);
   assert.equal(updated.phone, user.phone); assert.equal(updated.email, user.email); assert.equal(updated.name, user.name);
-  const sessionCheck = await fetch(`http://localhost:${server.address().port}/api/auth/me`, { headers: { Authorization: `Bearer ${oldSession}` } });
+  const sessionCheck = await fetch(`http://localhost:${server.address().port}/api/auth/me`, { headers: { Cookie: `__Host-dts-session=${oldSession}` } });
   assert.equal(sessionCheck.status, 401);
   console.log('Admin recovery checks passed: authorization, IDs, expiry, hashing, concurrent use, replay, phone login, session revocation and preserved customer data.');
 } finally { if (server) await new Promise(resolve => server.close(resolve)); await mongoose.disconnect(); await db.stop(); }

@@ -1,32 +1,18 @@
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-
-const TOKEN_KEY = 'dts.token';
-
-export function getToken() {
-  return localStorage.getItem(TOKEN_KEY) || null;
-}
-
-export function setToken(token) {
-  if (token) {
-    localStorage.setItem(TOKEN_KEY, token);
-  } else {
-    localStorage.removeItem(TOKEN_KEY);
-  }
-}
+const API_BASE = (import.meta.env.VITE_API_URL || '/api').replace(/\/$/, '');
 
 async function request(endpoint, options = {}) {
-  const token = getToken();
+
   const headers = {
     'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+
     ...(options.headers || {}),
   };
 
   const url = `${API_BASE}${endpoint}`;
 
   try {
-    const res = await fetch(url, { ...options, headers });
-    const data = await res.json().catch(() => ({}));
+    const res = await fetch(url, { ...options, headers, credentials: 'include' });
+    const data = await res.json().catch(() => { throw new Error('The server returned an unexpected response. Please try again later.'); });
     if (!res.ok) {
       const error = new Error(data.message || `Request failed with status ${res.status}`);
       error.status = res.status;
@@ -36,7 +22,7 @@ async function request(endpoint, options = {}) {
     return data;
   } catch (err) {
     if (err.name === 'TypeError' && err.message.includes('fetch')) {
-      const netErr = new Error('Backend server is not reachable. Ensure the Express server is running on port 5000.');
+      const netErr = new Error('Cannot reach the service. Please check your connection and try again.');
       netErr.isNetworkError = true;
       throw netErr;
     }
@@ -50,6 +36,7 @@ export const api = {
   },
 
   auth: {
+    logout: () => request('/auth/logout', { method: 'POST' }),
     resetPassword: (data) => request('/auth/reset-password', { method: 'POST', body: JSON.stringify(data) }),
     login: (phoneOrCreds, password, countryCode = '+91') => {
       const body = typeof phoneOrCreds === 'object'

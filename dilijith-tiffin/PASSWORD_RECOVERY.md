@@ -19,3 +19,22 @@ replace old grants. Expiry is checked explicitly. HTTPS is required in productio
 No email or SMS is sent. Email delivery code, configuration and dependency were
 removed. Shared hashing, validation, session revocation and rate limiting remain.
 Customer contact, subscription, credit and delivery data are unchanged.
+
+Login is limited to 50 attempts per IP and 10 per normalized identifier in each
+five-minute window. Registration allows 20 per IP and five per identifier in
+15-minute windows. Limits are persisted in MongoDB, expire automatically and
+return HTTP 429 with Retry-After; they never change account status. All attempts
+count, including successful ones. Phone and email identifiers are normalized.
+Phone and email aliases have separate counters; the IP cap covers both.
+Unknown accounts receive identical throttling. Database failures return 503.
+Behind a reverse proxy, configure Express trust proxy for only trusted proxy
+addresses; client-controlled forwarding headers are not used by default.
+Run npm run test:throttle for expiry, normalization and concurrency checks.
+
+Sessions use a host-only __Host-dts-session cookie with HttpOnly, Secure,
+SameSite=Strict and Path=/. JWTs are not returned in login/signup JSON or stored
+in localStorage. Clients send credentials with requests. Mutations require an
+allowed Origin; set ALLOWED_ORIGIN to the exact frontend origin in production.
+Use HTTPS and same-site frontend/API hosting. Logout clears the cookie.
+Tests explicitly carry cookies because Node fetch has no browser cookie jar;
+cookie flags and origin checks are tested separately by npm run test:cookie.

@@ -1,0 +1,33 @@
+import assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
+import mongoose from 'mongoose';
+import { MongoMemoryServer } from 'mongodb-memory-server';
+process.env.JWT_SECRET = randomUUID();
+process.env.NODE_ENV = 'test';
+const db = await MongoMemoryServer.create();
+let server;
+try {
+  await mongoose.connect(db.getUri(), { dbName: 'dts_test_cookie' });
+  const { default: User } = await import('../server/models/User.js');
+  const { default: app } = await import('../server/app.js');
+  await User.create({ name: 'Cookie test', phone: '+919876543210', password: 'CookieTest123' });
+  server = app.listen(0); await new Promise(resolve => server.once('listening', resolve));
+  const base = `http://localhost:${server.address().port}/api/auth`;
+  const request = (path, body, cookie, origin = 'http://localhost:5173') => fetch(base + path, { method: body ? 'POST' : 'GET', headers: { 'Content-Type': 'application/json', Origin: origin, ...(cookie ? { Cookie: cookie } : {}) }, ...(body ? { body: JSON.stringify(body) } : {}) });
+  const login = await request('/login', { phone: '9876543210', password: 'CookieTest123' });
+  assert.equal(login.status, 200);
+  assert.equal((await login.json()).token, undefined);
+  const header = login.headers.get('set-cookie');
+  for (const flag of ['HttpOnly', 'Secure', 'SameSite=Strict', 'Path=/']) assert.ok(header.includes(flag));
+  const cookie = header.split(';')[0];
+  assert.equal((await request('/me', null, cookie)).status, 200);
+  assert.equal((await request('/me')).status, 401);
+  const bearerOnly = await fetch(base + '/me', { headers: { Authorization: `Bearer ${cookie.split('=')[1]}` } });
+  assert.equal(bearerOnly.status, 401);
+  const noOrigin = await fetch(base + '/logout', { method: 'POST', headers: { Cookie: cookie } });
+  assert.equal(noOrigin.status, 403);
+  assert.equal((await request('/logout', {}, cookie, 'https://attacker.example')).status, 403);
+  const logout = await request('/logout', {}, cookie);
+  assert.equal(logout.status, 200); assert.match(logout.headers.get('set-cookie'), /Expires=Thu, 01 Jan 1970/);
+  console.log('Cookie tests passed: secure flags, no JSON token, cookie authentication, origin rejection and logout clearing.');
+} finally { if (server) await new Promise(resolve => server.close(resolve)); await mongoose.disconnect(); await db.stop(); }

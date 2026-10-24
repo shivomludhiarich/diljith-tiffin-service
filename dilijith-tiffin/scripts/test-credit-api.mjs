@@ -28,7 +28,7 @@ try {
   server = app.listen(0, '127.0.0.1'); await new Promise(resolve => server.once('listening', resolve));
   const base = `http://127.0.0.1:${server.address().port}/api`;
   async function request(path, body, actor = admin) {
-    const response = await fetch(base + path, { method: body ? 'POST' : 'GET', headers: { Authorization: `Bearer ${generateToken(actor)}`, 'Content-Type': 'application/json' }, ...(body ? { body: JSON.stringify(body) } : {}) });
+    const response = await fetch(base + path, { method: body ? 'POST' : 'GET', headers: { Cookie: `__Host-dts-session=${generateToken(actor)}`, Origin: 'http://localhost:5173', 'Content-Type': 'application/json' }, ...(body ? { body: JSON.stringify(body) } : {}) });
     return { status: response.status, data: await response.json() };
   }
   const today = todayStr();

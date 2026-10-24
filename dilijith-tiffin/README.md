@@ -2,11 +2,13 @@
 
 Full-stack MERN application for Dilijith Tiffin Service with React + Vite frontend, Express + Node.js backend, and persistent MongoDB database storage.
 
+For the single-project Vercel setup, environment settings and deployment checks, see [VERCEL_DEPLOYMENT.md](VERCEL_DEPLOYMENT.md).
+
 ---
 
 ## 1. Prerequisites
 
-- **Node.js**: v18.0.0 or higher
+- **Node.js**: 22 (recommended for local development and Vercel)
 - **MongoDB**: An existing MongoDB Atlas cluster or local MongoDB instance (viewable via MongoDB Compass)
 
 ---
@@ -22,12 +24,13 @@ Create a [`.env`](.env) file in the project root directory (copied from [`.env.e
 PORT=5000
 MONGODB_URI=mongodb+srv://<username>:<password>@cluster0.krqi54p.mongodb.net
 MONGODB_DB_NAME=dilijith_tiffin
-JWT_SECRET=your_jwt_secret_here
+JWT_SECRET=<generate-a-random-secret-of-at-least-32-characters>
+ALLOWED_ORIGIN=http://localhost:5173
 
 # ==========================================
 # Frontend Configuration (Vite)
 # ==========================================
-VITE_API_URL=http://localhost:5000/api
+VITE_API_URL=/api
 VITE_WHATSAPP_NUMBER=
 ```
 
@@ -58,7 +61,7 @@ npm run server
 ```
 - Starts the Express backend on port `5000`.
 - Connects securely to your MongoDB database using Mongoose.
-- Automatically initializes initial data if the database is empty.
+- Never seeds data during startup. Development fixtures require the explicit `npm run seed:dev` command and opt-in settings below.
 - Health check available at: `http://localhost:5000/api/health`
 
 ### Start the Frontend (Terminal 2):
@@ -66,7 +69,7 @@ npm run server
 npm run dev
 ```
 - Starts the Vite development server on `http://localhost:5173`.
-- Communicates with the backend API via `http://localhost:5000/api`.
+- Requests `/api` on the frontend origin; Vite proxies these requests to port 5000 locally.
 
 ---
 
@@ -103,7 +106,7 @@ When you open **MongoDB Compass** and connect to your database (`dilijith_tiffin
 
 ### Authentication
 - `POST /api/auth/register`: Register a new user (`name`, `email`, `password`, `phone`).
-- `POST /api/auth/login`: Login with phone and password, returns JWT token.
+- `POST /api/auth/login`: Login with phone and password, sets the secure HttpOnly session cookie.
 - `POST /api/auth/reset-password`: Complete an admin-approved, single-use recovery. See PASSWORD_RECOVERY.md.
 - `GET /api/auth/me`: Fetch currently authenticated user profile.
 
@@ -125,6 +128,6 @@ When you open **MongoDB Compass** and connect to your database (`dilijith_tiffin
 
 ## Account provisioning
 
-Startup does not seed accounts by default. No default admin or customer password exists. Optional development seeding requires ENABLE_DEMO_SEED=true and explicit SEED_ADMIN_PHONE and SEED_ADMIN_PASSWORD (12+ characters); production disables it. Seed customers receive random, unrecorded passwords and need assisted recovery. Do not enable seeding against a real customer database. Existing accounts are not changed.
+Startup never seeds accounts. No default admin or customer password exists. Optional `npm run seed:dev` requires ENABLE_DEMO_SEED=true and explicit SEED_ADMIN_PHONE and SEED_ADMIN_PASSWORD (12+ characters); production and Vercel disable it. Seed customers receive random, unrecorded passwords and need assisted recovery. Do not enable seeding against a real customer database. Existing accounts are not changed.
 
 Run npm test for the full suite, including password recovery, and npm run build for production output. Tests use disposable databases, never the live dataset.

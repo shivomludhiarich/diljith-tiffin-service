@@ -1,30 +1,20 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { KEYS, readJSON, removeKey, writeJSON } from '../utils/storage';
-import { api, getToken, setToken } from '../services/api';
+import { api } from '../services/api';
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(() => readJSON(KEYS.auth, null));
-  const [loading, setLoading] = useState(false);
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  // Sync token and profile on load if token exists
   useEffect(() => {
-    const existingToken = getToken();
-    if (existingToken && !user) {
-      api.auth.me()
-        .then((res) => {
-          if (res?.user) {
-            setUser(res.user);
-            writeJSON(KEYS.auth, res.user);
-          }
-        })
-        .catch(() => {
-          setToken(null);
-          removeKey(KEYS.auth);
-        });
-    }
-  }, [user]);
+    localStorage.removeItem('dts.token');
+    removeKey(KEYS.auth);
+    let active = true;
+    api.auth.me().then(res => { if (active) setUser(res.user); }).catch(() => {}).finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, []);
 
   // Real authentication: Phone/Credentials Login
   const loginWithCredentials = useCallback(async (phoneOrCreds, password, countryCode = '+91') => {
@@ -34,10 +24,10 @@ export function AuthProvider({ children }) {
         ? phoneOrCreds
         : { phone: phoneOrCreds, password, countryCode };
       const res = await api.auth.login(payload);
-      if (res?.token) {
-        setToken(res.token);
+      if (res?.user) {
+
         setUser(res.user);
-        writeJSON(KEYS.auth, res.user);
+
       }
       return { ok: true, user: res.user };
     } catch (err) {
@@ -52,10 +42,10 @@ export function AuthProvider({ children }) {
     setLoading(true);
     try {
       const res = await api.auth.register(userData);
-      if (res?.token) {
-        setToken(res.token);
+      if (res?.user) {
+
         setUser(res.user);
-        writeJSON(KEYS.auth, res.user);
+
       }
       return { ok: true, user: res.user };
     } catch (err) {
@@ -65,9 +55,9 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
     setUser(null);
-    setToken(null);
+    await api.auth.logout();
     removeKey(KEYS.auth);
   }, []);
 
@@ -75,7 +65,7 @@ export function AuthProvider({ children }) {
     setUser((prev) => {
       if (!prev) return prev;
       const next = { ...prev, ...patch };
-      writeJSON(KEYS.auth, next);
+
       return next;
     });
   }, []);

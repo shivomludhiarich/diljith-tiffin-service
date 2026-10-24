@@ -1,8 +1,9 @@
 export function errorHandler(err, req, res, next) {
-  const statusCode = res.statusCode && res.statusCode !== 200 ? res.statusCode : 500;
+  const statusCode = err.status || (res.statusCode && res.statusCode !== 200 ? res.statusCode : 500);
   
   // Safe sanitized message without leaking stack traces or credentials
   let message = err.message || 'An internal server error occurred.';
+  if (err.type === 'entity.parse.failed') message = 'Invalid JSON request body.';
 
   // Handle Mongoose duplicate key errors gracefully
   if (err.code === 11000) {

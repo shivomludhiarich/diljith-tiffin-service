@@ -1,4 +1,5 @@
 import User from '../models/User.js';
+import { setSessionCookie } from '../middleware/sessionCookie.js';
 import { generateToken } from '../middleware/auth.js';
 import { normalizePhone, validatePhone } from '../utils/phone.js';
 import { normalizeEmail, validEmail, passwordError } from '../../src/utils/authValidation.js';
@@ -106,7 +107,8 @@ export async function register(req, res) {
     });
 
     const token = generateToken(user);
-    res.status(201).json({ ok: true, token, user: serializeUser(user), message: 'Account created successfully!' });
+    setSessionCookie(res, token);
+    res.status(201).json({ ok: true, user: serializeUser(user), message: 'Account created successfully!' });
   } catch (error) {
     if (error.status) return res.status(error.status).json({ ok: false, field: error.field, message: error.message });
     if (error.code === 11000)
@@ -140,7 +142,8 @@ export async function login(req, res) {
       return res.status(403).json({ ok: false, message: 'Your account is inactive or suspended. Please contact customer support.' });
 
     const token = generateToken(user);
-    res.json({ ok: true, token, user: serializeUser(user), message: 'Logged in successfully.' });
+    setSessionCookie(res, token);
+    res.json({ ok: true, user: serializeUser(user), message: 'Logged in successfully.' });
   } catch (error) {
     res.status(500).json({ ok: false, message: error.message || 'Login failed.' });
   }

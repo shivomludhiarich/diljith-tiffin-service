@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
+import { readSessionCookie } from './sessionCookie.js';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
@@ -21,11 +22,7 @@ export function generateToken(user) {
 
 export async function protect(req, res, next) {
   try {
-    let token;
-    const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      token = authHeader.split(' ')[1];
-    }
+    const token = readSessionCookie(req);
 
     if (!token) {
       return res.status(401).json({

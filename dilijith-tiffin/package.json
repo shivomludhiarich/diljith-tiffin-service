@@ -13,12 +13,16 @@
     "test:allocation": "node scripts/test-meal-allocation.mjs",
     "test:integration": "node scripts/run-database-tests.mjs test-mongodb-integration.mjs",
     "test:auth": "node scripts/run-database-tests.mjs test-auth-pages.mjs",
-    "test": "npm run test:admin && npm run test:user && npm run test:allocation && npm run test:credits && npm run test:credit-ui && npm run test:credit-api && npm run test:database && npm run test:recovery",
+    "test": "npm run test:admin && npm run test:user && npm run test:allocation && npm run test:credits && npm run test:credit-ui && npm run test:credit-api && npm run test:database && npm run test:recovery && npm run test:throttle && npm run test:cookie && npm run test:vercel",
+    "test:cookie": "node scripts/test-session-cookie.mjs",
+    "test:throttle": "node scripts/test-auth-throttle.mjs",
     "test:recovery": "node scripts/test-password-reset.mjs",
     "test:credits": "node scripts/test-credit-accounting.mjs",
     "test:credit-api": "node scripts/test-credit-api.mjs",
     "test:database": "node scripts/run-database-tests.mjs",
-    "test:credit-ui": "node scripts/test-credit-ui.mjs"
+    "test:credit-ui": "node scripts/test-credit-ui.mjs",
+    "seed:dev": "node scripts/seed-dev.mjs",
+    "test:vercel": "node scripts/test-vercel.mjs"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

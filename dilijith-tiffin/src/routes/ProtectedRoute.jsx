@@ -3,9 +3,10 @@ import { useAuth } from '../context/AuthContext';
 
 // Frontend-only demo gating. This is NOT security.
 export default function ProtectedRoute({ role }) {
-  const { isAuthenticated, role: userRole } = useAuth();
+  const { isAuthenticated, role: userRole, loading } = useAuth();
   const location = useLocation();
 
+  if (loading) return <p role="status">Checking your session…</p>;
   if (!isAuthenticated) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   if (role && userRole !== role) {
     return <Navigate to={userRole === 'admin' ? '/admin/dashboard' : '/user/dashboard'} replace />;
