@@ -25,7 +25,7 @@ export const buildWhatsappUrl = (number, message = '') => {
 };
 
 export const mealEnquiryMessage = ({ mealOption, price }) =>
-  `Hello! I would like to enquire about the ${mealOption} (₹${typeof price === 'number' ? price.toLocaleString('en-IN') : price}) at Dilijith Tiffin Service.`;
+  `Hello! I would like to enquire about the ${mealOption} (₹${typeof price === 'number' ? price.toLocaleString('en-IN') : price}) at Diljit Tiffin Service.`;
 
 export const buildMealWhatsappUrl = (mealOption, price, number) => {
   const envNum = typeof import.meta !== 'undefined' && import.meta.env?.VITE_WHATSAPP_NUMBER;
@@ -35,4 +35,4 @@ export const buildMealWhatsappUrl = (mealOption, price, number) => {
 };
 
 export const renewalMessage = ({ name, plan }) =>
-  `Hello, I would like to renew my Dilijith Tiffin Service subscription. My name is ${name}, and my current plan is ${plan}.`;
+  `Hello, I would like to renew my Diljit Tiffin Service subscription. My name is ${name}, and my current plan is ${plan}.`;

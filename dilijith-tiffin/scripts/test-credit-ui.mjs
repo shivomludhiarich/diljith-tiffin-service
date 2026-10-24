@@ -14,7 +14,14 @@ try {
   assert.match(review, /Allocation requires review/);
   assert.doesNotMatch(review, /NaN|undefined|>0<|Not in your plan/);
   const { default: TodaysMeals } = await server.ssrLoadModule('/src/components/dashboard/TodaysMeals.jsx');
-  const mealsHtml = renderToStaticMarkup(React.createElement(TodaysMeals, { meals: [{ mealType: 'lunch', included: true, cutoff: '2026-10-22T03:30:00.000Z', entries: [{ id: 'booking', status: 'Scheduled', cancellable: true }] }], onCancel: () => {} }));
+  const mealsHtml = renderToStaticMarkup(React.createElement(TodaysMeals, { now: new Date('2026-10-22T03:00:00Z'), meals: [{ mealType: 'lunch', included: true, cutoff: '2026-10-22T03:30:00.000Z', entries: [{ id: 'booking', status: 'Scheduled', cancellable: true }] }], onCancel: () => {} }));
   assert.match(mealsHtml, /cancel until/);
+  for (const [mealType, cutoff] of [['breakfast', '2026-10-21T15:30:00Z'], ['lunch', '2026-10-22T04:30:00Z'], ['dinner', '2026-10-22T13:30:00Z']]) {
+    const meals = [{ mealType, included: true, cutoff, entries: [{ id: mealType, status: 'Scheduled', cancellable: true }] }];
+    const render = now => renderToStaticMarkup(React.createElement(TodaysMeals, { meals, now, onCancel: () => {} }));
+    assert.doesNotMatch(render(new Date(new Date(cutoff) - 1)), /disabled=""/);
+    assert.match(render(new Date(cutoff)), /disabled=""/);
+    assert.match(render(new Date(new Date(cutoff).getTime() + 1)), /Cancellation closed/);
+  }
   console.log('Dashboard rendering checks passed: backend meal balances and review-required state.');
 } finally { await server.close(); }

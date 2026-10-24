@@ -4,7 +4,7 @@ import { buildWhatsappUrl, cleanNumber } from '../utils/whatsapp';
 
 const rawEnv = typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env.VITE_WHATSAPP_NUMBER : undefined;
 const whatsappNum = cleanNumber(rawEnv || '918699476361');
-const defaultMessage = 'Hi! I would like to know more about Dilijith Tiffin Service.';
+const defaultMessage = 'Hi! I would like to know more about Diljit Tiffin Service.';
 const whatsappUrl = buildWhatsappUrl(whatsappNum, defaultMessage);
 
 export const BRAND = {
@@ -12,7 +12,7 @@ export const BRAND = {
   tagline: 'Authentic North Indian food, delivered fresh',
   logo,
   contact: {
-    phone: '+91 86994 76361',
+    phone: '86994 76361',
     email: 'contact@dilijithtiffin.com',
     address: 'Indiranagar, Bengaluru, Karnataka 560038',
   },

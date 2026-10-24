@@ -66,7 +66,7 @@ export const api = {
 
   user: {
     getDashboard:   () => request('/user/dashboard'),
-    getTodaysMeals: () => request('/user/meals/today'),
+    getTodaysMeals: (date) => request(`/user/meals/today${date ? `?date=${encodeURIComponent(date)}` : ''}`),
     getRecentMeals: (limit = 8) => request(`/user/meals/recent?limit=${limit}`),
     cancelMeal:     (recordId, opId) => request(`/user/meals/${recordId}/cancel`, { method: 'POST', body: JSON.stringify({ opId }) }),
     updateAddress:  (address) => request('/user/me/address', { method: 'PATCH', body: JSON.stringify({ address }) }),

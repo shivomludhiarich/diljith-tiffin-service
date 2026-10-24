@@ -32,12 +32,12 @@ function Entry({ meal, entry, showPlan, onCancel }) {
       {entry.status === 'Cancelled' && (
         <p className="mt-2 text-xs text-muted">{entry.cancelledAt ? `Cancelled on ${fmtTime(entry.cancelledAt)}. Your credit was kept.` : 'Cancelled. Your credit was kept.'}</p>
       )}
-      {entry.status === 'Consumed' && <p className="mt-2 text-xs text-muted">Enjoyed today. This meal used one credit.</p>}
+      {entry.status === 'Consumed' && <p className="mt-2 text-xs text-muted">Delivered. This meal used one credit.</p>}
     </div>
   );
 }
 
-export default function TodaysMeals({ meals, onCancel }) {
+export default function TodaysMeals({ meals, onCancel, now = new Date() }) {
   return (
     <div className="grid gap-4 md:grid-cols-3">
       {meals.map((meal) => {
@@ -56,12 +56,12 @@ export default function TodaysMeals({ meals, onCancel }) {
               <div className="mt-3 border-t border-line pt-3">
                 <StatusBadge status={meal.status} />
                 <p className="mt-2 text-xs text-muted">
-                  {meal.included ? 'No meal is scheduled for today. Your credits may be used up.' : 'Add this meal to your plan by contacting us.'}
+                  {meal.included ? 'No meal is scheduled for this date. Your credits may be used up.' : 'Add this meal to your plan by contacting us.'}
                 </p>
               </div>
             ) : (
               meal.entries.map((entry) => (
-                <Entry key={entry.id} meal={meal} entry={entry} showPlan={meal.entries.length > 1} onCancel={onCancel} />
+                <Entry key={entry.id} meal={meal} entry={{ ...entry, cancellable: entry.cancellable && new Date(now) < new Date(meal.cutoff) }} showPlan={meal.entries.length > 1} onCancel={onCancel} />
               ))
             )}
           </article>

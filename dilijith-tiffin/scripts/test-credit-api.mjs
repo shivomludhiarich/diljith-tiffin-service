@@ -51,6 +51,13 @@ try {
   assert.equal(await Ledger.countDocuments({ booking: lunch._id, operation: 'consumption' }), 1);
   const dinner = records.find(r => r.mealType === 'dinner' && r.date === addDays(today, 1));
   assert.equal((await request(`/user/meals/${dinner._id}/cancel`, { opId: randomUUID() }, other)).status, 404);
+  const upcoming = await request(`/user/meals/today?date=${addDays(today, 1)}`, null, user);
+  assert.equal(upcoming.status, 200);
+  assert.ok(upcoming.data.meals.every(m => m.date === addDays(today, 1)));
+  assert.ok(upcoming.data.meals.find(m => m.mealType === 'dinner').entries.some(e => e._id === String(dinner._id) && e.cancellable));
+  const otherUpcoming = await request(`/user/meals/today?date=${addDays(today, 1)}`, null, other);
+  assert.ok(otherUpcoming.data.meals.every(m => m.entries.length === 0));
+  assert.equal((await request('/user/meals/today?date=invalid', null, user)).status, 400);
   const cancellation = { opId: randomUUID() };
   assert.equal((await request(`/user/meals/${dinner._id}/cancel`, cancellation, user)).data.ok, true);
   assert.equal((await request(`/user/meals/${dinner._id}/cancel`, cancellation, user)).data.ok, true);

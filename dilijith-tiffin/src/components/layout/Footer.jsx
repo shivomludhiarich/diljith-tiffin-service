@@ -40,7 +40,7 @@ export default function Footer() {
           <ul className={col}>
             <li className="flex gap-2">
               <Phone className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-              <a href={`tel:${BRAND.contact.phone.replace(/\s+/g, '')}`} className="hover:text-leaf">{BRAND.contact.phone}</a>
+              <a href={`tel:+91${BRAND.contact.phone.replace(/\s+/g, '')}`} className="hover:text-leaf">{BRAND.contact.phone}</a>
             </li>
             <li className="flex gap-2">
               <Mail className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />

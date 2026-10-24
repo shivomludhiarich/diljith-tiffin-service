@@ -4,7 +4,7 @@ import Subscription from '../models/Subscription.js';
 import MealRecord from '../models/MealRecord.js';
 import { deriveSubStatus, isLiveStatus } from './adminController.js';
 import { cutoffFor } from '../../src/utils/userLogic.js';
-import { todayStr } from '../../src/utils/dates.js';
+import { todayStr, addDays } from '../../src/utils/dates.js';
 
 const MEAL_KEYS = ['breakfast', 'lunch', 'dinner'];
 
@@ -114,7 +114,9 @@ export async function getUserDashboard(req, res) {
 export async function getTodaysMeals(req, res) {
   try {
     const userId = req.user._id;
-    const today = todayStr();
+    const currentDate = todayStr();
+    const today = req.query.date || currentDate;
+    if (![currentDate, addDays(currentDate, 1)].includes(today)) return res.status(400).json({ ok: false, message: 'Choose today or tomorrow.' });
     const now = new Date();
 
     const subs = await Subscription.find({
@@ -147,6 +149,7 @@ export async function getTodaysMeals(req, res) {
 
       return {
         mealType,
+        date: today,
         included,
         cutoff,
         entries,

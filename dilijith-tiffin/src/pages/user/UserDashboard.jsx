@@ -16,7 +16,7 @@ import useNow from '../../hooks/useNow';
 import { mealLabel, uid } from '../../utils/adminLogic';
 import { planDetails } from '../../utils/userLogic';
 import { renewalMessage } from '../../utils/whatsapp';
-import { diffDays, formatDate, todayStr } from '../../utils/dates';
+import { addDays, diffDays, formatDate, todayStr } from '../../utils/dates';
 
 const MEAL_ICONS = { breakfast: Coffee, lunch: Sun, dinner: Moon };
 const MEAL_COLORS = { breakfast: 'text-amber', lunch: 'text-leaf', dinner: 'text-brand' };
@@ -67,10 +67,10 @@ export default function UserDashboard() {
     const current = ++generation.current;
     setLoadError('');
     try {
-      const [dashboard, meals, recent] = await Promise.all([api.user.getDashboard(), api.user.getTodaysMeals(), api.user.getRecentMeals()]);
-      if (!dashboard.ok || !meals.ok || !recent.ok) throw new Error('Invalid balance response.');
+      const [dashboard, meals, recent, tomorrow] = await Promise.all([api.user.getDashboard(), api.user.getTodaysMeals(), api.user.getRecentMeals(), api.user.getTodaysMeals(addDays(today, 1))]);
+      if (!dashboard.ok || !meals.ok || !recent.ok || !tomorrow.ok) throw new Error('Invalid balance response.');
       if (current !== generation.current) return false;
-      setData({ summary: dashboard.summary, meals: meals.meals, recent: recent.meals });
+      setData({ summary: dashboard.summary, meals: meals.meals, recent: recent.meals, tomorrow: tomorrow.meals });
       return true;
     } catch (err) { if (current === generation.current) { setLoadError(err.message); setData(null); } return false; }
   }, [user.id, today]);
@@ -101,7 +101,7 @@ export default function UserDashboard() {
 
   if (loadError) return <div className="container-x py-10" role="alert">Balances could not be refreshed: {loadError} <button onClick={refresh}>Try again</button></div>;
   if (!data) return <p className="container-x py-10" role="status">Loading meal balances?</p>;
-  const { summary, meals, recent } = data;
+  const { summary, meals, recent, tomorrow } = data;
   const { running, past, stats, mealCredits, nearestExpiry, overallStatus, expiring } = summary;
   const firstName = (user.name || 'there').split(' ')[0];
   const daysToExpiry = nearestExpiry ? diffDays(nearestExpiry, today) : null;
@@ -137,7 +137,7 @@ export default function UserDashboard() {
             title="No subscription yet"
             message="Subscriptions are set up by our team. Message us on WhatsApp and we will get you started."
             action={<WhatsAppButton label="Contact us on WhatsApp" variant="primary"
-              message={`Hello, I would like to know about the Dilijith Tiffin Service plans. My name is ${user.name}.`} />}
+              message={`Hello, I would like to know about the Diljit Tiffin Service plans. My name is ${user.name}.`} />}
           />
         </div>
       ) : (
@@ -176,7 +176,13 @@ export default function UserDashboard() {
 
           <section aria-labelledby="today-title" className="mt-10">
             <h2 id="today-title" className="mb-3 text-2xl">Today&apos;s meals</h2>
-            <TodaysMeals meals={meals} onCancel={askCancel} />
+            <TodaysMeals now={now} meals={meals} onCancel={askCancel} />
+          </section>
+
+          <section aria-labelledby="tomorrow-title" className="mt-10">
+            <h2 id="tomorrow-title" className="mb-3 text-2xl">Tomorrow&apos;s meals</h2>
+            <p className="mb-3 text-sm text-muted">Cancel tomorrow&apos;s breakfast before 9 PM today. All deadlines are in Indian Standard Time.</p>
+            <TodaysMeals now={now} meals={tomorrow} onCancel={askCancel} />
           </section>
 
           <section aria-labelledby="subs-title" className="mt-10">
@@ -212,7 +218,7 @@ export default function UserDashboard() {
       {pending && (
         <ConfirmDialog open busy={busy} title={`Cancel today's ${pending.meal.mealType}?`} confirmLabel="Cancel meal" danger
           onConfirm={confirmCancel} onClose={() => setPending(null)}>
-          <p>Your {pending.meal.mealType} for {formatDate(today)} will be cancelled and our kitchen will be told.</p>
+          <p>Your {pending.meal.mealType} for {formatDate(pending.meal.date || today)} will be cancelled and our kitchen will be told.</p>
           <p>Your credit stays with your plan. You can&apos;t undo this here, so message us on WhatsApp if you change your mind.</p>
         </ConfirmDialog>
       )}

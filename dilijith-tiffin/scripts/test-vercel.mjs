@@ -45,7 +45,13 @@ try {
   assert.equal(malformed.status, 400); assert.equal((await malformed.json()).message, 'Invalid JSON request body.');
   await mongoose.disconnect();
   delete process.env.MONGODB_URI;
-  const unavailable = await fetch(base + '/api/health');
+  const messages = [];
+  const originalError = console.error;
+  let unavailable;
+  console.error = message => messages.push(message);
+  try { unavailable = await fetch(base + '/api/health'); }
+  finally { console.error = originalError; }
+  assert.deepEqual(messages, ['[API initialization: environment] Configure MONGODB_URI.']);
   assert.equal(unavailable.status, 503); assert.equal((await unavailable.json()).database.connected, false);
   process.env.MONGODB_URI = db.getUri();
   assert.equal((await fetch(base + '/api/health')).status, 200);

@@ -175,7 +175,7 @@ test('recent activity: newest first, never future dates, cancellation timestamps
 
 test('WhatsApp: encoded message, configured numbers only', () => {
   const msg = renewalMessage({ name: 'Asha Rao', plan: planDetails(fresh().subscriptions.find((s) => s.id === 'SUB-1002')) });
-  assert.match(msg, /^Hello, I would like to renew my Dilijith Tiffin Service subscription\. My name is Asha Rao, and my current plan is SUB-1002, 1 month, Lunch, Dinner/);
+  assert.match(msg, /^Hello, I would like to renew my Diljit Tiffin Service subscription\. My name is Asha Rao, and my current plan is SUB-1002, 1 month, Lunch, Dinner/);
   const url = buildWhatsappUrl('+91 98765-43210', msg);
   assert.ok(url.startsWith('https://wa.me/919876543210?text='));
   assert.equal(decodeURIComponent(url.split('?text=')[1]), msg);
