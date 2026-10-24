@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
@@ -31,11 +32,9 @@ async function seedRealData() {
   await User.deleteMany({});
 
   console.log('[Seed] Database wiped clean.');
-
-  const defaultPasswordHash = await bcrypt.hash('User@123', 10);
-  const adminPasswordHash = await bcrypt.hash('Admin@123', 10);
+  const adminPasswordHash = await bcrypt.hash(randomBytes(32).toString('base64url'), 10);
   // Shivom's original password hash from existing account
-  const shivomPasswordHash = '$2b$10$35jU1mOhbMEVcfqEFDedEOjnVh2KL3HqSbDjVtnhE/qO3D1OOPGSy';
+  const shivomPasswordHash = await bcrypt.hash(randomBytes(32).toString('base64url'), 10);
 
   // 1. Create Dilijith Admin
   const admin = await User.create({
@@ -81,7 +80,7 @@ async function seedRealData() {
       name: 'Priya Sharma',
       phone: '+919845012345',
       email: 'priya.sharma@gmail.com',
-      password: defaultPasswordHash,
+      password: await bcrypt.hash(randomBytes(32).toString('base64url'), 10),
       role: 'user',
       status: 'Active',
       address: {
@@ -106,7 +105,7 @@ async function seedRealData() {
       name: 'Rohan Mehta',
       phone: '+919871023456',
       email: 'rohan.mehta@outlook.com',
-      password: defaultPasswordHash,
+      password: await bcrypt.hash(randomBytes(32).toString('base64url'), 10),
       role: 'user',
       status: 'Active',
       address: {
@@ -131,7 +130,7 @@ async function seedRealData() {
       name: 'Ananya Iyer',
       phone: '+919940134567',
       email: 'ananya.iyer@gmail.com',
-      password: defaultPasswordHash,
+      password: await bcrypt.hash(randomBytes(32).toString('base64url'), 10),
       role: 'user',
       status: 'Active',
       address: {
@@ -156,7 +155,7 @@ async function seedRealData() {
       name: 'Vikramaditya Reddy',
       phone: '+919731245678',
       email: 'vikram.reddy@gmail.com',
-      password: defaultPasswordHash,
+      password: await bcrypt.hash(randomBytes(32).toString('base64url'), 10),
       role: 'user',
       status: 'Active',
       address: {
@@ -181,7 +180,7 @@ async function seedRealData() {
       name: 'Meera Nair',
       phone: '+919847356789',
       email: 'meera.nair@yahoo.com',
-      password: defaultPasswordHash,
+      password: await bcrypt.hash(randomBytes(32).toString('base64url'), 10),
       role: 'user',
       status: 'Active',
       address: {
@@ -206,7 +205,7 @@ async function seedRealData() {
       name: 'Rahul Verma',
       phone: '+919811467890',
       email: 'rahul.verma@gmail.com',
-      password: defaultPasswordHash,
+      password: await bcrypt.hash(randomBytes(32).toString('base64url'), 10),
       role: 'user',
       status: 'Active',
       address: {
@@ -231,7 +230,7 @@ async function seedRealData() {
       name: 'Sneha Kulkarni',
       phone: '+919820578901',
       email: 'sneha.kulkarni@gmail.com',
-      password: defaultPasswordHash,
+      password: await bcrypt.hash(randomBytes(32).toString('base64url'), 10),
       role: 'user',
       status: 'Active',
       address: {
@@ -256,7 +255,7 @@ async function seedRealData() {
       name: 'Karthik Nambiar',
       phone: '+919741689012',
       email: 'karthik.nambiar@gmail.com',
-      password: defaultPasswordHash,
+      password: await bcrypt.hash(randomBytes(32).toString('base64url'), 10),
       role: 'user',
       status: 'Active',
       address: {
@@ -281,7 +280,7 @@ async function seedRealData() {
       name: 'Divya Menon',
       phone: '+919884790123',
       email: 'divya.menon@gmail.com',
-      password: defaultPasswordHash,
+      password: await bcrypt.hash(randomBytes(32).toString('base64url'), 10),
       role: 'user',
       status: 'Active',
       address: {
@@ -306,7 +305,7 @@ async function seedRealData() {
       name: 'Amit Patel',
       phone: '+919825801234',
       email: 'amit.patel@gmail.com',
-      password: defaultPasswordHash,
+      password: await bcrypt.hash(randomBytes(32).toString('base64url'), 10),
       role: 'user',
       status: 'Active',
       address: {
@@ -333,7 +332,7 @@ async function seedRealData() {
       name: 'Neha Agarwal',
       phone: '+919830912345',
       email: 'neha.agarwal@gmail.com',
-      password: defaultPasswordHash,
+      password: await bcrypt.hash(randomBytes(32).toString('base64url'), 10),
       role: 'user',
       status: 'Active',
       address: null, // Intentionally null so admin dashboard "Missing addresses" alert has an authentic case

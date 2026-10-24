@@ -78,7 +78,7 @@ Run all test suites:
 # Run all unit tests (accounting, customer logic, meal allocation)
 npm test
 
-# Run the live MongoDB integration tests
+# Run isolated disposable MongoDB integration tests
 npm run test:integration
 ```
 
@@ -103,15 +103,15 @@ When you open **MongoDB Compass** and connect to your database (`dilijith_tiffin
 
 ### Authentication
 - `POST /api/auth/register`: Register a new user (`name`, `email`, `password`, `phone`).
-- `POST /api/auth/login`: Login with email and password, returns JWT token.
-- `POST /api/auth/demo`: Demo switcher login (issues valid JWT token for demo accounts).
+- `POST /api/auth/login`: Login with phone and password, returns JWT token.
+- `POST /api/auth/reset-password`: Complete an admin-approved, single-use recovery. See PASSWORD_RECOVERY.md.
 - `GET /api/auth/me`: Fetch currently authenticated user profile.
 
 ### Admin Operations (Protected: Admin role required)
 - `GET /api/admin/state`: Fetch full current state from MongoDB.
 - `GET /api/admin/dashboard`: Daily prep count summary and metrics.
 - `GET /api/admin/users`: Search and list all registered customers.
-- `POST /api/admin/users`: Create a customer record.
+- `POST /api/admin/users`: Create a customer record with an explicit password; the server always assigns the user role.
 - `POST /api/admin/subscriptions/allocate`: Allocate independent breakfast, lunch, or dinner credits.
 - `POST /api/admin/subscriptions/:id/adjust`: Auditable credit adjustment (+/-) with negative balance protection.
 - `POST /api/admin/subscriptions/:id/renew`: Extend subscription duration and add renewal credits.
@@ -122,3 +122,9 @@ When you open **MongoDB Compass** and connect to your database (`dilijith_tiffin
 - `GET /api/user/meals/today`: Today's breakfast, lunch, and dinner status with cancellation cutoff checks.
 - `GET /api/user/meals/recent`: Recent meal consumption and cancellation history.
 - `POST /api/user/meals/:id/cancel`: Cancel a meal before deadline (credit is preserved).
+
+## Account provisioning
+
+Startup does not seed accounts by default. No default admin or customer password exists. Optional development seeding requires ENABLE_DEMO_SEED=true and explicit SEED_ADMIN_PHONE and SEED_ADMIN_PASSWORD (12+ characters); production disables it. Seed customers receive random, unrecorded passwords and need assisted recovery. Do not enable seeding against a real customer database. Existing accounts are not changed.
+
+Run npm test for the full suite, including password recovery, and npm run build for production output. Tests use disposable databases, never the live dataset.

@@ -6,8 +6,13 @@ import Activity from '../models/Activity.js';
 import { MOCK_USERS } from '../../src/data/mockUsers.js';
 import { createSeed } from '../../src/data/adminSeed.js';
 import { normalizePhone } from '../utils/phone.js';
+import { randomBytes } from 'node:crypto';
 
 export async function seedInitialDataIfEmpty() {
+  if (process.env.ENABLE_DEMO_SEED !== 'true' || process.env.NODE_ENV === 'production') return;
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD;
+  const adminPhone = process.env.SEED_ADMIN_PHONE;
+  if (!adminPassword || adminPassword.length < 12 || !adminPhone) throw new Error('Explicit seed admin phone and password (12+ characters) are required.');
   const userCount = await User.countDocuments();
   if (userCount > 0) {
     // Database already has records, preserve existing data completely
@@ -19,10 +24,9 @@ export async function seedInitialDataIfEmpty() {
   // 1. Create Admin
   const admin = await User.create({
     name: 'Dilijith Admin',
-    email: 'admin@dilijithtiffin.com',
-    password: 'Admin@123',
+    password: adminPassword,
     role: 'admin',
-    phone: normalizePhone('+919999999999'),
+    phone: normalizePhone(adminPhone),
     status: 'Active',
   });
 
@@ -33,7 +37,7 @@ export async function seedInitialDataIfEmpty() {
     const created = await User.create({
       name: u.name,
       email: u.email,
-      password: 'User@123',
+      password: randomBytes(32).toString('base64url'),
       role: 'user',
       phone: normalizePhone(rawPhone),
       status: 'Active',

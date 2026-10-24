@@ -186,7 +186,8 @@ export async function getUsers(req, res) {
 
 export async function createUser(req, res) {
   try {
-    const { name, email, password = 'User@123', phone, role = 'user', countryCode = '+91' } = req.body;
+    const { name, email, password, phone, countryCode = '+91' } = req.body;
+    if (typeof password !== 'string' || password.length < 6 || Buffer.byteLength(password, 'utf8') > 72) return res.status(400).json({ ok: false, field: 'password', message: 'Provide a password of at least 6 characters and at most 72 bytes.' });
     if (!name || !String(name).trim()) {
       return res.status(400).json({ ok: false, field: 'name', message: 'Name is required.' });
     }
@@ -218,7 +219,7 @@ export async function createUser(req, res) {
       email: email.toLowerCase().trim(),
       password,
       phone: normalizedPhone,
-      role,
+      role: 'user',
       status: 'Active',
     });
     res.status(201).json({ ok: true, user: { _id: user._id, name: user.name, email: user.email, phone: user.phone, role: user.role, status: user.status } });

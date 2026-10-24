@@ -20,6 +20,14 @@ try {
   const { generateToken } = await import('../server/middleware/auth.js');
   const admin = await User.create({ name: 'Admin', phone: '+919876543211', password: 'AdminTest123', role: 'admin' });
   const oldSession = generateToken(user);
+  const createCustomer = async body => fetch(`http://localhost:${server.address().port}/api/admin/users`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${generateToken(admin)}` }, body: JSON.stringify(body) });
+  const newCustomer = { name: 'Role test', phone: '+919876543212', email: 'role@example.test', role: 'admin' };
+  assert.equal((await createCustomer(newCustomer)).status, 400);
+  const createdResponse = await createCustomer({ ...newCustomer, password: 'Explicit123!' });
+  assert.equal(createdResponse.status, 201);
+  const created = await createdResponse.json();
+  assert.equal(created.user.role, 'user');
+  assert.equal(created.user.password, undefined);
   const token = randomBytes(32).toString('hex');
   const reference = createHash('sha256').update(token).digest('hex');
   async function approve(id, jwt) {

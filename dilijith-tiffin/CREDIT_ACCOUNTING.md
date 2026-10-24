@@ -14,7 +14,7 @@ Allocation/replacement, adjustment, delivery, cancellation and renewal use Mongo
 
 Versioned bookings have a database-unique customer/date/meal serving key. Cancelled bookings release that key while preserving history. Scheduling also checks legacy bookings. Replacement explicitly confirms loss of access to **all** credits on conflicting subscriptions; it preserves their documents and history. Different meal subscriptions remain independent.
 
-Existing cancellation policy is retained: breakfast before 21:00 the previous day, lunch before 09:00, dinner before 15:00, all Asia/Kolkata. Scheduling does not debit credits. A timely cancellation records a zero-delta preservation entry, not a refund that creates an extra credit. Delivered, missed and late meals cannot be cancelled through the customer endpoint. The existing policy does not debit missed meals.
+Existing cancellation policy is retained: breakfast before 21:00 the previous day, lunch before 10:00, dinner before 19:00, all Asia/Kolkata. Scheduling does not debit credits. A timely cancellation records a zero-delta preservation entry, not a refund that creates an extra credit. Delivered, missed and late meals cannot be cancelled through the customer endpoint. The existing policy does not debit missed meals.
 
 Existing renewal policy adds durationMonths * 30 credits to each included category, extends the same subscription, and keeps its unused credits and consumed counters. It does not copy carried balances into another allocation. The ledger retains the original allocation and expiry, plus renewal's previous/new expiry. Renewal is allowed within seven days of expiry or afterward, and rejects overlapping allocations. No cross-customer credit transfer exists.
 
