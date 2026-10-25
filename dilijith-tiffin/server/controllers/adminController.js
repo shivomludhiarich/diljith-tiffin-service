@@ -1,3 +1,4 @@
+import { isServiceDay } from '../../src/utils/serviceDays.js';
 import { balances, totals } from '../services/credits.js';
 import CreditLedger from '../models/CreditLedger.js';
 import User from '../models/User.js';
@@ -86,6 +87,12 @@ export async function getAdminState(req, res) {
     }));
 
     const subscriptions = rawSubs.map((s) => formatSub(s, today));
+    const userMap = new Map(users.map(u => [u.id, u]));
+    const accountingWarnings = rawMeals.filter(m => isServiceDay(m.date) && m.status === 'Scheduled' && m.accountingWarning?.reason).map(m => ({
+      id: String(m._id), customerName: userMap.get(String(m.user))?.name || 'Missing customer',
+      phone: userMap.get(String(m.user))?.phone || '', date: m.date, mealType: m.mealType,
+      subscriptionId: String(m.subscription), reason: m.accountingWarning.reason,
+    }));
 
     const subCodeMap = new Map();
     for (const s of rawSubs) {
@@ -137,6 +144,8 @@ export async function getAdminState(req, res) {
       ok: true,
       today,
       state: {
+        accountingWarnings,
+        accountingCatchingUp: Boolean(req.mealAccounting?.more),
         ledger: rawLedger,
         users,
         subscriptions,
@@ -238,8 +247,8 @@ export async function getDashboardMetrics(req, res) {
     const [totalUsers, allSubs, mealsTodayScheduled, mealsTodayCancelled, recentActivities] = await Promise.all([
       User.countDocuments({ role: { $ne: 'admin' } }),
       Subscription.find(),
-      MealRecord.countDocuments({ date: today, status: { $in: ['Scheduled', 'Consumed'] } }),
-      MealRecord.countDocuments({ date: today, status: 'Cancelled' }),
+      MealRecord.countDocuments({ date: isServiceDay(today) ? today : 'no-service', status: { $in: ['Scheduled', 'Consumed'] } }),
+      MealRecord.countDocuments({ date: isServiceDay(today) ? today : 'no-service', status: 'Cancelled' }),
       Activity.find().sort({ createdAt: -1 }).limit(8),
     ]);
 
@@ -255,7 +264,7 @@ export async function getDashboardMetrics(req, res) {
     const prep = { breakfast: 0, lunch: 0, dinner: 0 };
     for (const mealType of MEAL_KEYS) {
       prep[mealType] = await MealRecord.countDocuments({
-        date: today,
+        date: isServiceDay(today) ? today : 'no-service',
         mealType,
         status: { $in: ['Scheduled', 'Consumed'] },
       });
@@ -296,7 +305,7 @@ export async function getMealSummary(req, res) {
 
     const counts = await Promise.all(
       MEAL_KEYS.map(async (mealType) => {
-        const count = await MealRecord.countDocuments({ date: targetDate, mealType, status: { $in: ['Scheduled', 'Consumed'] } });
+        const count = await MealRecord.countDocuments({ date: isServiceDay(targetDate) ? targetDate : 'no-service', mealType, status: { $in: ['Scheduled', 'Consumed'] } });
         return [mealType, count];
       })
     );
@@ -325,7 +334,7 @@ export async function getMealDeliveries(req, res) {
     }
 
     // Fetch scheduled meals for this date + mealType, populate only needed user fields
-    const records = await MealRecord.find({ date: targetDate, mealType, status: { $in: ['Scheduled', 'Consumed'] } })
+    const records = await MealRecord.find({ date: isServiceDay(targetDate) ? targetDate : 'no-service', mealType, status: { $in: ['Scheduled', 'Consumed'] } })
       .populate('user', 'name phone address status')
       .sort({ createdAt: 1 });
 

@@ -36,6 +36,9 @@ export const api = {
   },
 
   auth: {
+    forgotPassword: email => request('/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }) }),
+    requestEmailVerification: email => request('/auth/email-verification/request', { method: 'POST', body: JSON.stringify({ email }) }),
+    verifyEmailCode: (email, code) => request('/auth/email-verification/verify', { method: 'POST', body: JSON.stringify({ email, code }) }),
     logout: () => request('/auth/logout', { method: 'POST' }),
     resetPassword: (data) => request('/auth/reset-password', { method: 'POST', body: JSON.stringify(data) }),
     login: (phoneOrCreds, password, countryCode = '+91') => {

@@ -99,3 +99,5 @@ dependencies needed on Vercel. The function tests were rerun after final error
 handling edits and passed.
 
 Automatic cutoff accounting and scheduler timing limitations are documented in [AUTOMATIC_MEALS.md](AUTOMATIC_MEALS.md).
+
+Signup email verification requires server-only GMAIL_SMTP_USER and GMAIL_SMTP_APP_PASSWORD. See [EMAIL_VERIFICATION.md](EMAIL_VERIFICATION.md). Missing settings block new signup verification, not existing login or API health.

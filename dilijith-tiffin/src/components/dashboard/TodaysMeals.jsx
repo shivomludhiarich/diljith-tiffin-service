@@ -56,7 +56,7 @@ export default function TodaysMeals({ meals, onCancel, now = new Date() }) {
               <div className="mt-3 border-t border-line pt-3">
                 <StatusBadge status={meal.status} />
                 <p className="mt-2 text-xs text-muted">
-                  {meal.included ? 'No meal is scheduled for this date. Your credits may be used up.' : 'Add this meal to your plan by contacting us.'}
+                  {meal.serviceDay === false ? 'Sunday is a non-service day. No credits are used and no cancellation is needed.' : meal.included ? 'No meal is scheduled for this date. Your credits may be used up.' : 'Add this meal to your plan by contacting us.'}
                 </p>
               </div>
             ) : (

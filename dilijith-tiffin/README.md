@@ -133,3 +133,5 @@ When you open **MongoDB Compass** and connect to your database (`dilijith_tiffin
 Startup never seeds accounts. No default admin or customer password exists. Optional `npm run seed:dev` requires ENABLE_DEMO_SEED=true and explicit SEED_ADMIN_PHONE and SEED_ADMIN_PASSWORD (12+ characters); production and Vercel disable it. Seed customers receive random, unrecorded passwords and need assisted recovery. Do not enable seeding against a real customer database. Existing accounts are not changed.
 
 Run npm test for the full suite, including password recovery, and npm run build for production output. Tests use disposable databases, never the live dataset.
+
+New public signups require email verification via Gmail SMTP. Follow [EMAIL_VERIFICATION.md](EMAIL_VERIFICATION.md) to configure the sender and App Password in Vercel. Existing phone login and admin-assisted password recovery are unchanged.

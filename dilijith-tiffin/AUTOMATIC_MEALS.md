@@ -68,3 +68,23 @@ fixtures run before a future activation timestamp to test legacy compatibility.
 No production scheduler or live customer meal was exercised by these tests.
 
 Validation on 24 October 2026: all 12 main test scripts passed when invoked directly with Node (including the database runner), and the production Vite build passed. The built HTML references the existing logo asset as its favicon. No live deployment was performed.
+
+## Sunday non-service policy (25 October 2026)
+
+Automatic accounting and admin warnings are enabled again. Sunday has no meals:
+new allocations and renewals skip Sunday without spending a scheduling quota;
+customer Sunday cards say No service on Sundays with no cancellation button.
+The API rejects consumption and cancellation of legacy Sunday bookings, and
+Sunday prep/delivery lists are empty. Automatic processing skips Sunday meal
+records, including Sunday breakfast whose cutoff falls on Saturday evening.
+
+Keep the scheduler running on Sundays: Monday breakfast is processed at 9 PM
+Sunday. The exclusion is based on the meal date in IST, not the invocation day.
+No records were deleted or refunded, and historical Sunday charges remain intact.
+Subscription expiry dates and allocated credit quantities are unchanged; unused
+credits follow existing expiry/renewal rules. Existing old Sunday bookings are
+excluded from operations without a destructive data migration.
+
+Admin accounting exceptions remain visible across the portal with customer,
+meal, date and reason, background refresh, and a manual Check again action.
+Sunday bookings are not reported as accounting failures.

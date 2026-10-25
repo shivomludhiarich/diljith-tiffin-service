@@ -1,3 +1,5 @@
+import { withVerifiedEmail } from './verified-email-fixture.mjs';
+import './fixed-service-test-clock.mjs';
 import { randomUUID } from 'node:crypto';
 import { todayStr, addDays } from '../src/utils/dates.js';
 import 'dotenv/config';
@@ -18,6 +20,7 @@ let server;
 let baseUrl;
 
 async function request(path, options = {}) {
+  if (path === '/auth/register') options.body = JSON.stringify(await withVerifiedEmail(JSON.parse(options.body)));
   if (options.method === 'POST' && /subscriptions|meals/.test(path)) {
     const body = JSON.parse(options.body || '{}');
     body.opId ??= randomUUID();

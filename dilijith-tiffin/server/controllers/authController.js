@@ -1,3 +1,6 @@
+import mongoose from 'mongoose';
+import EmailVerification from '../models/EmailVerification.js';
+import { grantDigest } from './emailVerificationController.js';
 import User from '../models/User.js';
 import { setSessionCookie } from '../middleware/sessionCookie.js';
 import { generateToken } from '../middleware/auth.js';
@@ -92,18 +95,27 @@ export async function register(req, res) {
       return res.status(409).json({ ok: false, field: 'phone', message: 'An account with this phone number already exists.' });
 
     const normalizedEmail = normalizeEmail(email);
-    if (normalizedEmail && !validEmail(normalizedEmail)) return res.status(400).json({ ok: false, field: 'email', message: 'Enter a valid email address.' });
+    if (!normalizedEmail || !validEmail(normalizedEmail)) return res.status(400).json({ ok: false, field: 'email', message: 'Enter a valid email address.' });
     if (normalizedEmail && await User.exists({ email: normalizedEmail })) return res.status(409).json({ ok: false, field: 'email', message: 'An account with this email already exists.' });
 
     // --- Create user (role always 'user', never trusted from request body) ---
-    const user = await User.create({
+    const verificationToken = req.body.verificationToken;
+    if (typeof verificationToken !== 'string' || !/^[a-f0-9]{64}$/.test(verificationToken)) return res.status(400).json({ ok: false, field: 'email', message: 'Verify your email before signing up.' });
+    let user;
+    await mongoose.connection.transaction(async session => {
+      const grant = await EmailVerification.findOneAndDelete({ _id: normalizedEmail, verified: true,
+        grantHash: grantDigest(verificationToken), expiresAt: { $gt: new Date() } }, { session });
+      if (!grant) throw Object.assign(new Error('Email verification expired or was already used. Please verify again.'), { status: 400, field: 'email' });
+      [user] = await User.create([{
       name: name.trim(),
       phone: normalizedPhone,
       ...(normalizedEmail ? { email: normalizedEmail } : {}),
       password,
       role: 'user',
       status: 'Active',
+      emailVerifiedAt: new Date(),
       address,
+      }], { session });
     });
 
     const token = generateToken(user);

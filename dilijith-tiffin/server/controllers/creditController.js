@@ -1,3 +1,4 @@
+import { isServiceDay } from '../../src/utils/serviceDays.js';
 import mongoose from 'mongoose';
 import { createHash, randomUUID } from 'node:crypto';
 import Subscription from '../models/Subscription.js';
@@ -36,6 +37,7 @@ async function schedule(sub, from, quotas, session) {
   const counts = Object.fromEntries(sub.mealTypes.map(t => [t, 0]));
   const rows = [];
   for (let date = from; date <= sub.endDate; date = addDays(date, 1)) {
+    if (!isServiceDay(date)) continue;
     for (const mealType of sub.mealTypes) {
       if (counts[mealType] >= quotas[mealType]) continue;
       // Check historical records as well as versioned serving-key uniqueness.
@@ -48,7 +50,9 @@ async function schedule(sub, from, quotas, session) {
   if (rows.length) await MealRecord.insertMany(rows, { session });
 }
 async function cancelScheduled(sub, session) {
-  await MealRecord.updateMany({ subscription: sub._id, status: 'Scheduled', date: { $gte: todayStr() } },
+  const pending = await MealRecord.find({ subscription: sub._id, status: 'Scheduled', date: { $gte: todayStr() } }).select('_id date').session(session);
+  const ids = pending.filter(record => isServiceDay(record.date)).map(record => record._id);
+  await MealRecord.updateMany({ _id: { $in: ids }, status: 'Scheduled' },
     { $set: { status: 'Cancelled', cancelledAt: new Date(), cancelledBy: 'subscription' }, $unset: { servingKey: '' } }, { session });
 }
 // Every write, receipt, ledger entry, and booking transition commits together.
@@ -164,6 +168,7 @@ async function booking(req, session) {
   const id = req.params.id;
   const record = await MealRecord.findOne(mongoose.isValidObjectId(id) ? { _id: id } : { recordCode: id }).session(session);
   if (!record || (req.user.role !== 'admin' && String(record.user) !== String(req.user._id))) fail('Meal not found.', 404);
+  if (!isServiceDay(record.date)) fail('No meal service on Sundays.', 409);
   await lockUser(record.user, session);
   if (record.status !== 'Scheduled') fail('Meal is no longer scheduled.', 409);
   const sub = await Subscription.findById(record.subscription).session(session);

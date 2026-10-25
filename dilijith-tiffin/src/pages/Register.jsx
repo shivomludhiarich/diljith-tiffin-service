@@ -1,3 +1,4 @@
+import { api } from '../services/api';
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
@@ -53,6 +54,27 @@ export default function Register() {
   const [countryCode, setCountryCode] = useState('+91');
   const [phone, setPhone]           = useState('');
   const [email, setEmail] = useState('');
+  const [emailCode, setEmailCode] = useState('');
+  const [verification, setVerification] = useState(null);
+  const [emailBusy, setEmailBusy] = useState(false);
+  const [emailNotice, setEmailNotice] = useState('');
+  const [emailSent, setEmailSent] = useState(false);
+  const [verifiedEmail, setVerifiedEmail] = useState('');
+  const verifyMail = async (send) => {
+    const target = normalizeEmail(email);
+    if (!validEmail(target)) { setEmailNotice('Enter a valid email address.'); return; }
+    setEmailBusy(true); setEmailNotice('');
+    try {
+      if (send) {
+        const result = await api.auth.requestEmailVerification(target);
+        setEmailSent(true); setVerification(null); setEmailNotice(result.message);
+      } else {
+        const result = await api.auth.verifyEmailCode(target, emailCode);
+        setVerification(result.verificationToken); setVerifiedEmail(target); setEmailNotice(result.message);
+      }
+    } catch (err) { setEmailNotice(err.message); }
+    finally { setEmailBusy(false); }
+  };
 
   // Address
   const [houseOrFlat, setHouseOrFlat] = useState('');
@@ -102,7 +124,8 @@ export default function Register() {
     const e = {};
 
     if (!name.trim()) e.name = 'Please enter your full name.';
-    if (email.trim() && !validEmail(normalizeEmail(email))) e.email = 'Enter a valid email address.';
+    if (!validEmail(normalizeEmail(email))) e.email = 'Enter a valid email address.';
+    else if (!verification || verifiedEmail !== normalizeEmail(email)) e.email = 'Verify your email before creating an account.';
 
     if (!phone.trim()) {
       e.phone = 'Please enter your phone number.';
@@ -144,6 +167,7 @@ export default function Register() {
       const res = await registerWithCredentials({
         name: name.trim(),
         email: normalizeEmail(email),
+        verificationToken: verification,
         phone: phone.trim(),
         countryCode,
         password,
@@ -291,9 +315,16 @@ export default function Register() {
                       )}
                     </div>
                     <div className="sm:col-span-2">
-                      <label htmlFor="register-email" className="block text-sm font-bold text-ink">Email (optional)</label>
-                      <input id="register-email" name="email" type="email" autoComplete="email" maxLength={254} className={`${inputCls} mt-1`} value={email} onChange={e => { setEmail(e.target.value); clearErr('email'); }} />
-                      <p className="mt-1 text-xs text-muted">Optional contact email. Password recovery is assisted by the service team.</p>
+                      <label htmlFor="register-email" className="block text-sm font-bold text-ink">Email (required)</label>
+                      <input id="register-email" name="email" type="email" required autoComplete="email" maxLength={254} className={`${inputCls} mt-1`} value={email} disabled={emailBusy || submitting} onChange={e => { setEmail(e.target.value); setVerification(null); setEmailSent(false); setEmailCode(''); setEmailNotice(''); clearErr('email'); }} />
+                      <p className="mt-1 text-xs text-muted">Verify this address before signing up. Phone login and admin-assisted password recovery remain available.</p>
+                      <button type="button" className="mt-2 text-sm font-bold underline" disabled={emailBusy || submitting} onClick={() => verifyMail(true)}>{emailBusy ? 'Please wait...' : emailSent ? 'Resend code' : 'Send verification code'}</button>
+                      {emailSent && !verification && <div className="mt-2 flex gap-2">
+                        <input aria-label="Email verification code" autoComplete="one-time-code" inputMode="numeric" maxLength={6} className={inputCls} value={emailCode} onChange={e => setEmailCode(e.target.value.replace(/\D/g, ''))} placeholder="6-digit code" />
+                        <button type="button" className="font-bold underline" disabled={emailBusy || emailCode.length !== 6} onClick={() => verifyMail(false)}>Verify email</button>
+                      </div>}
+                      {verification && <p className="mt-2 text-sm text-leaf">Email verified</p>}
+                      {emailNotice && <p role="status" className="mt-2 text-sm">{emailNotice}</p>}
                       <FieldError message={errors.email} />
                     </div>
                   </div>
@@ -498,7 +529,7 @@ export default function Register() {
                 {/* Submit */}
                 <button
                   type="submit"
-                  disabled={submitting}
+                  disabled={submitting || emailBusy}
                   className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-ink bg-accent py-3 text-base font-bold text-ink shadow-popOrange transition-[transform,box-shadow] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-popOrangeSm active:translate-x-1 active:translate-y-1 active:shadow-none disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {submitting ? (

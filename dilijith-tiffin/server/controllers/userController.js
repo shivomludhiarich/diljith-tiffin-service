@@ -1,3 +1,4 @@
+import { isServiceDay } from '../../src/utils/serviceDays.js';
 import { balances, totals } from '../services/credits.js';
 export { cancelUserMeal } from './creditController.js';
 import Subscription from '../models/Subscription.js';
@@ -137,7 +138,7 @@ export async function getTodaysMeals(req, res) {
       const included = subs.some((s) => s.mealTypes.includes(mealType));
       const cutoff = cutoffFor(today, mealType);
       const entries = records
-        .filter((m) => m.mealType === mealType)
+        .filter((m) => isServiceDay(today) && m.mealType === mealType)
         .map((m) => ({
           id: m.recordCode || m._id.toString(),
           _id: m._id.toString(),
@@ -150,10 +151,11 @@ export async function getTodaysMeals(req, res) {
       return {
         mealType,
         date: today,
+        serviceDay: isServiceDay(today),
         included,
         cutoff,
         entries,
-        status: entries.length ? null : included ? 'Not scheduled' : 'Not Included',
+        status: !isServiceDay(today) ? 'No service on Sundays' : entries.length ? null : included ? 'Not scheduled' : 'Not Included',
       };
     });
 

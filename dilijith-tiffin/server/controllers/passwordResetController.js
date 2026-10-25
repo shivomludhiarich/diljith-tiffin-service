@@ -1,4 +1,6 @@
-import { createHash } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
+import { normalizeEmail, validEmail } from '../../src/utils/authValidation.js';
+import { sendRecoveryLink } from '../services/signupEmail.js';
 import User from '../models/User.js';
 import mongoose from 'mongoose';
 
@@ -21,6 +23,31 @@ import { withinRateLimit } from '../services/authRateLimit.js';
 const invalid = res => res.status(400).json({ ok: false, code: 'INVALID_RESET_TOKEN', message: 'This reset link is invalid or has expired. Please request a new link.' });
 const digest = token => createHash('sha256').update(token).digest('hex');
 const limited = res => res.status(429).set('Retry-After', '60').json({ ok: false, message: 'Too many requests. Please wait and try again.' });
+
+export async function forgotPassword(req, res) {
+  try {
+    if (!await withinRateLimit(`forgot-ip:${req.ip}`, 900000, 10)) return limited(res);
+    const email = normalizeEmail(req.body?.email);
+    if (!validEmail(email)) return res.status(400).json({ ok: false, message: 'Enter a valid email address.' });
+    if (!await withinRateLimit(`forgot-email:${digest(email)}`, 900000, 3)) return limited(res);
+    const origin = new URL(process.env.ALLOWED_ORIGIN || (process.env.NODE_ENV !== 'production' ? 'http://localhost:5173' : ''));
+    if ((process.env.NODE_ENV === 'production' && origin.protocol !== 'https:') || origin.href !== `${origin.origin}/` || !process.env.GMAIL_SMTP_USER || !process.env.GMAIL_SMTP_APP_PASSWORD?.trim()) throw new Error('Configuration unavailable');
+    const token = randomBytes(32).toString('hex');
+    const tokenHash = digest(token);
+    const user = await User.findOneAndUpdate({ email, status: 'Active', emailVerifiedAt: { $type: 'date' } }, {
+      $set: { resetTokenHash: tokenHash, resetTokenCreatedAt: new Date(), resetTokenExpiresAt: new Date(Date.now() + 1200000) },
+    });
+    if (user) {
+      try { await sendRecoveryLink(email, `${origin.origin}/reset-password#token=${token}`); }
+      catch {
+        await User.updateOne({ _id: user._id, resetTokenHash: tokenHash }, { $unset: { resetTokenHash: '', resetTokenCreatedAt: '', resetTokenExpiresAt: '' } });
+        // Keep account eligibility private and never log SMTP errors or secrets.
+        console.error('[Password recovery] Email delivery failed.');
+      }
+    }
+    res.json({ ok: true, message: 'If this is an active account with a verified email, we will attempt to send a reset link. Check your inbox and spam folder. If no email arrives, contact the service team for assisted recovery.' });
+  } catch { res.status(503).json({ ok: false, message: 'Email recovery is unavailable. Please use assisted recovery or try again later.' }); }
+}
 
 export async function resetPassword(req, res) {
   try {

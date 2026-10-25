@@ -1,6 +1,39 @@
-# Admin-assisted recovery
+# Password recovery
 
-There is no automated delivery channel. Support must independently verify the
+## Email recovery
+
+At /forgot-password, enter the email verified during signup. The same Gmail
+SMTP credentials used for signup send a single-use link expiring in 20 minutes.
+Configure GMAIL_SMTP_USER and GMAIL_SMTP_APP_PASSWORD as described in
+EMAIL_VERIFICATION.md. ALLOWED_ORIGIN must be the exact trusted website origin
+(for example https://diljit-tiffin-service.vercel.app), without /login or a path.
+Redeploy after setting these server-only variables.
+
+Only active accounts with emailVerifiedAt are eligible. Existing unverified
+addresses are not trusted for recovery. New public registrations require a
+verified email; admin creation requires an email but does not falsely verify it.
+Existing records are not migrated or blocked from phone login.
+
+Requests are limited to 3 per email and 10 per IP per 15 minutes. Responses do
+not reveal eligibility or claim delivery. SMTP failure removes the failed grant,
+logs a generic diagnostic, and keeps the same public response to avoid exposing
+accounts. Missing configuration returns 503 with assisted recovery instructions.
+If no message arrives, check spam or contact support. SMTP acceptance alone does
+not guarantee inbox delivery.
+
+Only SHA-256 token hashes are stored. Links carry the secret in a URL fragment,
+which is not sent in HTTP requests; the page removes it from history and keeps
+it in memory. Refreshing requires reopening the email link. Requesting another
+link replaces the previous grant. Password reset atomically consumes the grant,
+updates the bcrypt hash and revokes all old sessions. Phone login is unchanged.
+No roles, subscriptions, addresses or meal credits are changed.
+
+Run npm run test:email-recovery for mocked SMTP integration coverage. Real Gmail
+inbox delivery must still be checked after the owner configures and deploys it.
+
+## Admin-assisted fallback
+
+For customers without a verified email or working email delivery, Support must independently verify the
 customer's identity using its established process; knowing a phone number or
 address alone is not proof. The customer opens /reset-password on their own
 device and gives the displayed reference directly to the verified administrator.
@@ -16,8 +49,8 @@ the bcrypt password hash, removes the grant and increments the JWT version.
 Older sessions are rejected by existing authorization middleware. New approvals
 replace old grants. Expiry is checked explicitly. HTTPS is required in production.
 
-No email or SMS is sent. Email delivery code, configuration and dependency were
-removed. Shared hashing, validation, session revocation and rate limiting remain.
+The assisted flow sends no email or SMS. Shared hashing, validation, session
+revocation and rate limiting remain.
 Customer contact, subscription, credit and delivery data are unchanged.
 
 Login is limited to 50 attempts per IP and 10 per normalized identifier in each

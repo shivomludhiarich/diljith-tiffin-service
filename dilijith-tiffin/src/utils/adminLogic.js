@@ -1,3 +1,4 @@
+import { isServiceDay } from './serviceDays.js';
 // Display helpers and legacy demo-fixture commands. Authenticated operations use
 // the backend credit service; demo commands are never used as API fallbacks.
 // Backend `credit` and `balances` fields are authoritative for API records.
@@ -149,6 +150,7 @@ export function scheduleMeals(sub, fromDate, cap) {
   const types = MEAL_KEYS.filter((m) => sub.mealTypes.includes(m));
   const start = fromDate > sub.startDate ? fromDate : sub.startDate;
   for (let d = start; d <= sub.endDate && out.length < cap; d = addDays(d, 1)) {
+    if (!isServiceDay(d)) continue;
     for (const mealType of types) {
       if (out.length >= cap) break;
       out.push({ id: uid('meal'), userId: sub.userId, subscriptionId: sub.id, date: d, mealType, status: MEAL_STATUS.SCHEDULED });

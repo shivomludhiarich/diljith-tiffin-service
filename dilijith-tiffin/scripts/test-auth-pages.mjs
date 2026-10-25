@@ -1,3 +1,4 @@
+import { withVerifiedEmail } from './verified-email-fixture.mjs';
 import 'dotenv/config';
 if (!process.env.TEST_MONGODB_URI || !/^dts_test_/.test(process.env.TEST_MONGODB_DB_NAME || '')) throw new Error('Use an isolated TEST_MONGODB_URI and dts_test_ database.');
 process.env.MONGODB_URI = process.env.TEST_MONGODB_URI;
@@ -13,6 +14,7 @@ let server;
 let baseUrl;
 
 async function request(path, options = {}) {
+  if (path === '/auth/register') options.body = JSON.stringify(await withVerifiedEmail(JSON.parse(options.body)));
   const res = await fetch(`${baseUrl}${path}`, {
     ...options,
     headers: {

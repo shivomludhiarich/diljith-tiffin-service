@@ -17,6 +17,7 @@ const addressSchema = new mongoose.Schema(
 
 const userSchema = new mongoose.Schema(
   {
+    emailVerifiedAt: { type: Date, default: null },
     creditRevision: { type: Number, default: 0, select: false },
     tokenVersion: { type: Number, default: 0 },
     resetTokenHash: { type: String, select: false },

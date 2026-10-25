@@ -1,3 +1,4 @@
+import AccountingWarnings from '../components/admin/AccountingWarnings';
 import { useAdminData } from '../context/AdminDataContext';
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
@@ -59,7 +60,7 @@ function SidebarContent({ onNavigate }) {
 }
 
 export default function AdminLayout() {
-  const { loading, error, refreshFromBackend } = useAdminData();
+  const { loading, error, refreshFromBackend, accountingWarnings, accountingCatchingUp } = useAdminData();
   const [open, setOpen] = useState(false);
   const { pathname } = useLocation();
 
@@ -100,6 +101,7 @@ export default function AdminLayout() {
       )}
 
       <main className="min-w-0 flex-1 p-4 sm:p-6 lg:p-8">
+        <AccountingWarnings warnings={accountingWarnings} catchingUp={accountingCatchingUp} refresh={refreshFromBackend} />
         <>{loading ? <p role="status">Loading balances?</p> : error ? <div role="alert"><p>Balances could not be refreshed: {error}</p><button onClick={refreshFromBackend}>Try again</button></div> : <Outlet />}</>
       </main>
     </div>

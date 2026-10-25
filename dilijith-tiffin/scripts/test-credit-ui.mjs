@@ -23,5 +23,9 @@ try {
     assert.match(render(new Date(cutoff)), /disabled=""/);
     assert.match(render(new Date(new Date(cutoff).getTime() + 1)), /Cancellation closed/);
   }
+  const sunday = renderToStaticMarkup(React.createElement(TodaysMeals, { meals: [{ mealType: 'breakfast', included: true,
+    serviceDay: false, status: 'No service on Sundays', entries: [] }], onCancel: () => {} }));
+  assert.match(sunday, /No service on Sundays/);
+  assert.doesNotMatch(sunday, /Cancel Meal/);
   console.log('Dashboard rendering checks passed: backend meal balances and review-required state.');
 } finally { await server.close(); }

@@ -193,7 +193,7 @@ export default function UserDashboard() {
 
           <section aria-labelledby="tomorrow-title" className="mt-10">
             <h2 id="tomorrow-title" className="mb-3 text-2xl">Tomorrow&apos;s meals</h2>
-            <p className="mb-3 text-sm text-muted">Cancel tomorrow&apos;s breakfast before 9 PM today. All deadlines are in Indian Standard Time.</p>
+            <p className="mb-3 text-sm text-muted">No meals on Sundays. For service days, cancel tomorrow&apos;s breakfast before 9 PM today. All deadlines are in Indian Standard Time.</p>
             <TodaysMeals now={now} meals={tomorrow} onCancel={askCancel} />
           </section>
 

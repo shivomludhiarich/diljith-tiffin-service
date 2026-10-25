@@ -3,6 +3,10 @@ import mongoose from 'mongoose';
 const mealRecordSchema = new mongoose.Schema(
   {
     accountingVersion: Number,
+    accountingWarning: {
+      reason: String,
+      checkedAt: Date,
+    },
     servingKey: String,
     recordCode: {
       type: String,

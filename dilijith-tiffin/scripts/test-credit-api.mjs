@@ -1,3 +1,4 @@
+import { setTestNow } from './fixed-service-test-clock.mjs';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -150,6 +151,31 @@ try {
   assert.equal((await MealRecord.findById(historical._id)).status, 'Consumed');
   assert.equal((await Subscription.findById(legacy._id)).accountingVersion, undefined);
   assert.equal((await User.findById(other._id)).name, 'Other user');
+  const weekendUser = await User.create({ name: 'Weekend test', phone: '9000000009', password: randomUUID() });
+  const weekend = await request('/admin/subscriptions/allocate', { userId: String(weekendUser._id), durationMonths: 1,
+    startDate: '2026-10-24', mealTypes: ['dinner'], mealAllocations: { dinner: 5 }, opId: randomUUID() });
+  assert.equal(weekend.status, 201);
+  const weekendSub = weekend.data.subscription._id;
+  const bookings = await MealRecord.find({ subscription: weekendSub }).sort({ date: 1 });
+  assert.deepEqual(bookings.map(m => m.date), ['2026-10-24', '2026-10-26', '2026-10-27', '2026-10-28', '2026-10-29']);
+  const oldSunday = await MealRecord.create({ user: weekendUser._id, subscription: weekendSub, accountingVersion: 2,
+    date: '2026-10-25', mealType: 'dinner' });
+  assert.equal((await request(`/user/meals/${oldSunday._id}/cancel`, { opId: randomUUID() }, weekendUser)).status, 409);
+  assert.equal((await request(`/admin/meals/${oldSunday._id}/consume`, { opId: randomUUID() })).status, 409);
+  assert.equal((await request('/admin/meals/summary?date=2026-10-25')).data.total, 0);
+  assert.deepEqual((await request('/admin/meals/deliveries?date=2026-10-25&mealType=dinner')).data.deliveries, []);
+  assert.equal((await MealRecord.findById(oldSunday._id)).status, 'Scheduled');
+  assert.equal(await Ledger.countDocuments({ booking: oldSunday._id }), 0);
+  setTestNow('2026-10-25T08:00:00+05:30');
+  const sundayView = await request('/user/meals/today', null, weekendUser);
+  assert.equal(sundayView.status, 200);
+  assert.ok(sundayView.data.meals.every(m => m.serviceDay === false && m.entries.length === 0 && m.status === 'No service on Sundays'));
+  const sundayMetrics = await request('/admin/dashboard');
+  assert.deepEqual(sundayMetrics.data.metrics.prep, { breakfast: 0, lunch: 0, dinner: 0 });
+  setTestNow('2026-10-22T00:00:00+05:30');
+  assert.equal((await request(`/admin/subscriptions/${weekendSub}/cancel`, { opId: randomUUID() })).data.ok, true);
+  assert.equal((await MealRecord.findById(oldSunday._id)).status, 'Scheduled');
+  console.log('Sunday API checks passed: allocation skips Sunday, legacy Sunday mutations rejected, no Sunday deliveries.');
   console.log('Credit API/database tests passed: allocations, ownership, retries, concurrency, no overspend, renewal carry-forward, ledger reconciliation, uniqueness, legacy protection, authoritative dashboard.');
 } finally {
   if (server) await new Promise(resolve => server.close(resolve));

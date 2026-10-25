@@ -1,3 +1,4 @@
+import { isServiceDay } from './serviceDays.js';
 // Customer dashboard logic. Pure functions over the SAME shared records the admin portal uses
 // (subscriptions, mealRecords, adjustments, activity), so both portals always agree.
 //
@@ -78,7 +79,7 @@ export function todaysMeals(state, userId, today, now = new Date(), policy = MEA
     const included = live.some((s) => s.mealTypes.includes(mealType));
     const cutoff = cutoffFor(today, mealType, policy);
     const entries = state.mealRecords
-      .filter((m) => m.userId === userId && m.date === today && m.mealType === mealType && liveIds.has(m.subscriptionId))
+      .filter((m) => isServiceDay(today) && m.userId === userId && m.date === today && m.mealType === mealType && liveIds.has(m.subscriptionId))
       .map((m) => ({
         id: m.id, subscriptionId: m.subscriptionId, status: m.status, cancelledAt: m.cancelledAt ?? null,
         cancellable: m.status === MEAL_STATUS.SCHEDULED && now < cutoff,
@@ -111,6 +112,7 @@ export function cancelMeal(state, { userId, recordId }, { today, nowIso }, polic
   const sub = state.subscriptions.find((s) => s.id === rec.subscriptionId);
   if (!sub || !isLive(subscriptionStatus(sub, today))) return fail('This meal belongs to a subscription that is no longer active.');
 
+  if (!isServiceDay(rec.date)) return fail('No meal service on Sundays.');
   const cutoff = cutoffFor(rec.date, rec.mealType, policy);
   if (new Date(nowIso) >= cutoff) {
     return fail(`The cancellation deadline for this meal passed on ${cutoff.toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: 'numeric', minute: '2-digit' })}.`);

@@ -56,6 +56,26 @@ try {
   assert.equal((await MealRecord.findById(blocked._id)).status, 'Scheduled');
   assert.equal(await Ledger.countDocuments({ booking: blocked._id }), 0);
   assert.equal((await Subscription.findById(exhausted._id)).consumedMeals, 2);
+  // Sunday meals never consume, including breakfast whose cutoff is Saturday.
+  const sundayRecords = [];
+  for (const sub of await Subscription.find()) {
+    sundayRecords.push(await MealRecord.create({ user: customer._id, subscription: sub._id,
+      accountingVersion: 2, date: '2030-01-06', mealType: sub.mealTypes[0] }));
+  }
+  const breakfastSub = await Subscription.findOne({ mealTypes: 'breakfast' });
+  const monday = await MealRecord.create({ user: customer._id, subscription: breakfastSub._id,
+    accountingVersion: 2, date: '2030-01-07', mealType: 'breakfast' });
+  await settleDueMeals({ now: new Date('2030-01-06T20:59:59+05:30') });
+  assert.equal((await MealRecord.findById(monday._id)).status, 'Scheduled');
+  await settleDueMeals({ now: new Date('2030-01-06T21:00:00+05:30') });
+  assert.equal((await MealRecord.findById(monday._id)).status, 'Consumed');
+  for (const record of sundayRecords) {
+    assert.equal((await MealRecord.findById(record._id)).status, 'Scheduled');
+    assert.equal(await Ledger.countDocuments({ booking: record._id }), 0);
+    assert.equal((await MealRecord.findById(record._id)).accountingWarning?.reason, undefined);
+  }
+  assert.equal((await Subscription.findById(breakfastSub._id)).consumedMeals, 3);
+  console.log('Sunday accounting passed: all Sunday meals skipped, Monday breakfast charged at Sunday 9 PM.');
   const { default: app } = await import('../server/app.js');
   server = app.listen(0); await new Promise(resolve => server.once('listening', resolve));
   const url = `http://localhost:${server.address().port}/api/cron/consume-meals`;
