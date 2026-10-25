@@ -109,7 +109,7 @@ When you open **MongoDB Compass** and connect to your database (`dilijith_tiffin
 ### Authentication
 - `POST /api/auth/register`: Register a new user (`name`, `email`, `password`, `phone`).
 - `POST /api/auth/login`: Login with phone and password, sets the secure HttpOnly session cookie.
-- `POST /api/auth/reset-password`: Complete an admin-approved, single-use recovery. See PASSWORD_RECOVERY.md.
+- `POST /api/auth/reset-password`: Complete an emailed, single-use recovery link. See PASSWORD_RECOVERY.md.
 - `GET /api/auth/me`: Fetch currently authenticated user profile.
 
 ### Admin Operations (Protected: Admin role required)
@@ -130,8 +130,8 @@ When you open **MongoDB Compass** and connect to your database (`dilijith_tiffin
 
 ## Account provisioning
 
-Startup never seeds accounts. No default admin or customer password exists. Optional `npm run seed:dev` requires ENABLE_DEMO_SEED=true and explicit SEED_ADMIN_PHONE and SEED_ADMIN_PASSWORD (12+ characters); production and Vercel disable it. Seed customers receive random, unrecorded passwords and need assisted recovery. Do not enable seeding against a real customer database. Existing accounts are not changed.
+Startup never seeds accounts. No default admin or customer password exists. Optional `npm run seed:dev` requires ENABLE_DEMO_SEED=true and explicit SEED_ADMIN_PHONE and SEED_ADMIN_PASSWORD (12+ characters); production and Vercel disable it. Seed customers receive random, unrecorded passwords and cannot log in until a supported account onboarding flow is used. Do not enable seeding against a real customer database. Existing accounts are not changed.
 
 Run npm test for the full suite, including password recovery, and npm run build for production output. Tests use disposable databases, never the live dataset.
 
-New public signups require email verification via Gmail SMTP. Follow [EMAIL_VERIFICATION.md](EMAIL_VERIFICATION.md) to configure the sender and App Password in Vercel. Existing phone login and admin-assisted password recovery are unchanged.
+New public signups require email verification via Gmail SMTP. Follow [EMAIL_VERIFICATION.md](EMAIL_VERIFICATION.md) to configure the sender and App Password in Vercel. Phone login is unchanged. Password recovery uses verified email only; see PASSWORD_RECOVERY.md.

@@ -1,4 +1,4 @@
-import { isServiceDay } from '../../src/utils/serviceDays.js';
+import { isServiceDay, mealHistoryStatus, needsSundayCreditReview } from '../../src/utils/serviceDays.js';
 import { balances, totals } from '../services/credits.js';
 export { cancelUserMeal } from './creditController.js';
 import Subscription from '../models/Subscription.js';
@@ -184,7 +184,8 @@ export async function getRecentMealActivity(req, res) {
         subscriptionId: m.subscription.toString(),
         mealType: m.mealType,
         date: m.date,
-        status: m.status,
+        status: mealHistoryStatus(m),
+        creditReviewRequired: needsSundayCreditReview(m),
         cancelledAt: m.cancelledAt,
         cancelledBy: m.cancelledBy,
       })),

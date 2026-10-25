@@ -317,12 +317,13 @@ export default function Register() {
                     <div className="sm:col-span-2">
                       <label htmlFor="register-email" className="block text-sm font-bold text-ink">Email (required)</label>
                       <input id="register-email" name="email" type="email" required autoComplete="email" maxLength={254} className={`${inputCls} mt-1`} value={email} disabled={emailBusy || submitting} onChange={e => { setEmail(e.target.value); setVerification(null); setEmailSent(false); setEmailCode(''); setEmailNotice(''); clearErr('email'); }} />
-                      <p className="mt-1 text-xs text-muted">Verify this address before signing up. Phone login and admin-assisted password recovery remain available.</p>
-                      <button type="button" className="mt-2 text-sm font-bold underline" disabled={emailBusy || submitting} onClick={() => verifyMail(true)}>{emailBusy ? 'Please wait...' : emailSent ? 'Resend code' : 'Send verification code'}</button>
+                      <p className="mt-1 text-xs text-muted">Verify this address before signing up. Use this verified email to recover your password. Phone login remains available.</p>
+                      <button type="button" className="mt-2 rounded-xl bg-brand px-4 py-2 text-sm font-bold text-white disabled:opacity-50" disabled={emailBusy || submitting} onClick={() => verifyMail(true)}>{emailBusy ? 'Please wait...' : emailSent ? 'Resend code' : 'Send verification code'}</button>
                       {emailSent && !verification && <div className="mt-2 flex gap-2">
                         <input aria-label="Email verification code" autoComplete="one-time-code" inputMode="numeric" maxLength={6} className={inputCls} value={emailCode} onChange={e => setEmailCode(e.target.value.replace(/\D/g, ''))} placeholder="6-digit code" />
-                        <button type="button" className="font-bold underline" disabled={emailBusy || emailCode.length !== 6} onClick={() => verifyMail(false)}>Verify email</button>
+                        <button type="button" className="shrink-0 rounded-xl bg-brand px-4 py-2 font-bold text-white disabled:opacity-50" disabled={emailBusy || submitting || emailCode.length !== 6} onClick={() => verifyMail(false)}>Verify email</button>
                       </div>}
+                      {!verification && <p className="mt-1 text-xs text-muted">(Please check your inbox and spam folder for the verification code.)</p>}
                       {verification && <p className="mt-2 text-sm text-leaf">Email verified</p>}
                       {emailNotice && <p role="status" className="mt-2 text-sm">{emailNotice}</p>}
                       <FieldError message={errors.email} />

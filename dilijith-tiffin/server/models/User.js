@@ -20,6 +20,7 @@ const userSchema = new mongoose.Schema(
     emailVerifiedAt: { type: Date, default: null },
     creditRevision: { type: Number, default: 0, select: false },
     tokenVersion: { type: Number, default: 0 },
+    resetTokenSource: { type: String, enum: ['email'], select: false },
     resetTokenHash: { type: String, select: false },
     resetTokenCreatedAt: { type: Date, select: false },
     resetTokenExpiresAt: { type: Date, select: false },

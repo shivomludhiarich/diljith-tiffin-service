@@ -88,3 +88,8 @@ excluded from operations without a destructive data migration.
 Admin accounting exceptions remain visible across the portal with customer,
 meal, date and reason, background refresh, and a manual Check again action.
 Sunday bookings are not reported as accounting failures.
+
+Sunday history entries are displayed as No service on Sundays. An older stored
+Consumed record is flagged for credit review in customer and admin history;
+this presentation fix does not refund or erase historical ledger charges.
+The scheduler and cancellation/consumption endpoints continue to skip Sundays.

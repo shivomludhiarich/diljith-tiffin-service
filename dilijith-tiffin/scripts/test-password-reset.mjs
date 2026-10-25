@@ -35,14 +35,14 @@ try {
   }
   assert.equal((await approve(user.id)).status, 401);
   assert.equal((await approve(user.id, oldSession)).status, 403);
-  assert.equal((await approve('invalid', generateToken(admin))).status, 400);
-  assert.equal((await approve(admin.id, generateToken(admin))).status, 404);
-  const approval = await approve(user.id, generateToken(admin));
-  assert.equal(approval.status, 200);
-  assert.ok(!(await approval.text()).includes(token));
-  await User.updateOne({ _id: user.id }, { $set: { resetTokenExpiresAt: new Date(0) } });
+  assert.equal((await approve(user.id, generateToken(admin))).status, 404);
+  // Grants from the removed manual flow must no longer authorize a reset.
+  await User.updateOne({ _id: user.id }, { $set: { resetTokenHash: reference, resetTokenExpiresAt: new Date(Date.now() + 1200000) } });
   assert.equal((await post('reset-password', { token, password: 'Replacement123', confirmPassword: 'Replacement123' })).status, 400);
-  assert.equal((await approve(user.id, generateToken(admin))).status, 200);
+  // The email issuance path is covered end-to-end in test-email-recovery.
+  await User.updateOne({ _id: user.id }, { $set: { resetTokenSource: 'email', resetTokenExpiresAt: new Date(0) } });
+  assert.equal((await post('reset-password', { token, password: 'Replacement123', confirmPassword: 'Replacement123' })).status, 400);
+  await User.updateOne({ _id: user.id }, { $set: { resetTokenExpiresAt: new Date(Date.now() + 1200000) } });
   const stored = await User.findById(user.id).select('+resetTokenHash');
   assert.notEqual(stored.resetTokenHash, token);
   const payload = { token, password: 'Replacement123', confirmPassword: 'Replacement123' };
@@ -57,5 +57,5 @@ try {
   assert.equal(updated.phone, user.phone); assert.equal(updated.email, user.email); assert.equal(updated.name, user.name);
   const sessionCheck = await fetch(`http://localhost:${server.address().port}/api/auth/me`, { headers: { Cookie: `__Host-dts-session=${oldSession}` } });
   assert.equal(sessionCheck.status, 401);
-  console.log('Admin recovery checks passed: authorization, IDs, expiry, hashing, concurrent use, replay, phone login, session revocation and preserved customer data.');
+  console.log('Recovery checks passed: removed admin endpoint, rejected legacy grants, expiry, hashing, concurrent use, replay, phone login, session revocation and preserved customer data.');
 } finally { if (server) await new Promise(resolve => server.close(resolve)); await mongoose.disconnect(); await db.stop(); }

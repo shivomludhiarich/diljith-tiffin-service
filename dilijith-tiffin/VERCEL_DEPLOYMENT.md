@@ -84,7 +84,7 @@ After deployment, verify `/api/health` returns JSON and a connected database;
 and direct navigation/refresh on `/login`, `/dashboard`, `/admin` loads the SPA.
 Using test accounts, verify login/logout, cookie flags, admin/customer access,
 subscription allocation, independent meal balances, cancellation/consumption,
-recipient lists, and assisted recovery. Check cold and warm requests. Local
+recipient lists, and email password recovery. Check cold and warm requests. Local
 Node tests do not prove Vercel CDN rewrites or browser cookie behavior in a live
 deployment. No deployment or live database modifications were performed here.
 

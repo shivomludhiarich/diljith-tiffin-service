@@ -170,6 +170,13 @@ try {
   const sundayView = await request('/user/meals/today', null, weekendUser);
   assert.equal(sundayView.status, 200);
   assert.ok(sundayView.data.meals.every(m => m.serviceDay === false && m.entries.length === 0 && m.status === 'No service on Sundays'));
+  await MealRecord.updateOne({ _id: oldSunday._id }, { $set: { status: 'Consumed' } });
+  const sundayHistory = await request('/user/meals/recent', null, weekendUser);
+  const historyRow = sundayHistory.data.meals.find(m => m._id === String(oldSunday._id));
+  assert.equal(historyRow.status, 'No service on Sundays');
+  assert.equal(historyRow.creditReviewRequired, true);
+  assert.equal((await MealRecord.findById(oldSunday._id)).status, 'Consumed');
+  await MealRecord.updateOne({ _id: oldSunday._id }, { $set: { status: 'Scheduled' } });
   const sundayMetrics = await request('/admin/dashboard');
   assert.deepEqual(sundayMetrics.data.metrics.prep, { breakfast: 0, lunch: 0, dinner: 0 });
   setTestNow('2026-10-22T00:00:00+05:30');

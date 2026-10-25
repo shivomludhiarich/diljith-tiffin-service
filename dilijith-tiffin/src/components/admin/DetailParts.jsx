@@ -1,3 +1,4 @@
+import { mealHistoryStatus, needsSundayCreditReview } from '../../utils/serviceDays';
 import StatusBadge from './StatusBadge';
 import { formatDate, formatDateTime } from '../../utils/dates';
 import { mealLabel } from '../../utils/adminLogic';
@@ -48,7 +49,7 @@ export function MealHistory({ meals, showSub = false }) {
       {meals.map((m) => (
         <li key={m.id} className="flex items-center justify-between gap-3 px-3 py-2">
           <span>{formatDate(m.date)} · {mealLabel(m.mealType)}{showSub && <span className="text-muted"> · {m.subscriptionId}</span>}</span>
-          <StatusBadge status={m.status} />
+          <div><StatusBadge status={mealHistoryStatus(m)} />{needsSundayCreditReview(m) && <p className="mt-1 text-xs text-amber">Earlier charge needs credit review</p>}</div>
         </li>
       ))}
     </ul>

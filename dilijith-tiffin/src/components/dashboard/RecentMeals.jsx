@@ -1,3 +1,4 @@
+import { mealHistoryStatus, needsSundayCreditReview } from '../../utils/serviceDays';
 import StatusBadge from '../admin/StatusBadge';
 import EmptyState from '../common/EmptyState';
 import { mealLabel } from '../../utils/adminLogic';
@@ -17,7 +18,7 @@ export default function RecentMeals({ meals }) {
               </span>
             )}
           </span>
-          <StatusBadge status={m.status} />
+          <div><StatusBadge status={mealHistoryStatus(m)} />{needsSundayCreditReview(m) && <p className="mt-1 text-xs text-amber">Earlier charge needs credit review</p>}</div>
         </li>
       ))}
     </ul>

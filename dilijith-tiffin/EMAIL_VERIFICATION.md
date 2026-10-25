@@ -6,7 +6,7 @@ six-digit code, selects Verify email, then completes signup. Phone/password
 login remains unchanged. Existing accounts are not blocked or migrated.
 Administrator-created customer accounts retain their existing creation flow;
 they are not falsely marked as email-verified. Verified accounts can also request email password recovery; see PASSWORD_RECOVERY.md.
-Admin-assisted recovery remains available for accounts without a verified email.
+Recovery is email-only; accounts need a verified email to request a reset link.
 
 ## Gmail and Vercel setup
 
@@ -58,7 +58,7 @@ and [Gmail SMTP](https://developers.google.com/workspace/gmail/imap/imap-smtp).
   enforced in queries, so delayed cleanup cannot extend validity.
 - Missing SMTP configuration and SMTP failures return an honest error. Signup
   cannot bypass verification if email delivery is unavailable. Existing login,
-  admin operations and recovery continue to work without SMTP configuration.
+  and admin operations continue to work without SMTP configuration. Email recovery requires SMTP.
 
 ## Tests and deployment limits
 

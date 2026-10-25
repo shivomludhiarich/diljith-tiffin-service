@@ -17,8 +17,8 @@ Existing records are not migrated or blocked from phone login.
 Requests are limited to 3 per email and 10 per IP per 15 minutes. Responses do
 not reveal eligibility or claim delivery. SMTP failure removes the failed grant,
 logs a generic diagnostic, and keeps the same public response to avoid exposing
-accounts. Missing configuration returns 503 with assisted recovery instructions.
-If no message arrives, check spam or contact support. SMTP acceptance alone does
+accounts. Missing configuration returns 503 with instructions to try again later.
+If no message arrives, check spam and try requesting a new link later. SMTP acceptance alone does
 not guarantee inbox delivery.
 
 Only SHA-256 token hashes are stored. Links carry the secret in a URL fragment,
@@ -31,27 +31,14 @@ No roles, subscriptions, addresses or meal credits are changed.
 Run npm run test:email-recovery for mocked SMTP integration coverage. Real Gmail
 inbox delivery must still be checked after the owner configures and deploys it.
 
-## Admin-assisted fallback
+## Email-only recovery
 
-For customers without a verified email or working email delivery, Support must independently verify the
-customer's identity using its established process; knowing a phone number or
-address alone is not proof. The customer opens /reset-password on their own
-device and gives the displayed reference directly to the verified administrator.
-The admin selects that customer's details, confirms identity and approves the
-reference with Reset Password. The customer then enters their new password on
-the same page within 20 minutes. Refreshing loses the private secret and requires
-a new approval. Do not accept references forwarded by unrelated third parties.
-
-The browser generates a random 256-bit secret and displays only its SHA-256
-hash as the reference. No API response or log contains the secret or password.
-Only the hash is stored on the customer record. The server atomically changes
-the bcrypt password hash, removes the grant and increments the JWT version.
-Older sessions are rejected by existing authorization middleware. New approvals
-replace old grants. Expiry is checked explicitly. HTTPS is required in production.
-
-The assisted flow sends no email or SMS. Shared hashing, validation, session
-revocation and rate limiting remain.
-Customer contact, subscription, credit and delivery data are unchanged.
+Admin-assisted recovery and its API endpoint have been removed. The reset page
+requires an emailed token; it never generates a recovery reference. Reset grants
+must carry the server-issued email source marker. Older unmarked grants (including
+old email links) stop working after this deployment; request a fresh email link.
+Accounts without a previously verified email cannot use self-service recovery.
+There is no manual password reset fallback or verification bypass.
 
 Login is limited to 50 attempts per IP and 10 per normalized identifier in each
 five-minute window. Registration allows 20 per IP and five per identifier in

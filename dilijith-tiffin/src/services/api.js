@@ -52,7 +52,6 @@ export const api = {
   },
 
   admin: {
-    resetCustomerPassword: (id, data) => request(`/admin/users/${id}/reset-password`, { method: 'POST', body: JSON.stringify(data) }),
     getState:    () => request('/admin/state'),
     getDashboard: () => request('/admin/dashboard'),
     getUsers:    (search) => request(`/admin/users${search ? `?search=${encodeURIComponent(search)}` : ''}`),

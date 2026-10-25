@@ -27,5 +27,15 @@ try {
     serviceDay: false, status: 'No service on Sundays', entries: [] }], onCancel: () => {} }));
   assert.match(sunday, /No service on Sundays/);
   assert.doesNotMatch(sunday, /Cancel Meal/);
+  const { default: RecentMeals } = await server.ssrLoadModule('/src/components/dashboard/RecentMeals.jsx');
+  const { MealHistory } = await server.ssrLoadModule('/src/components/admin/DetailParts.jsx');
+  for (const Component of [RecentMeals, MealHistory]) {
+    const html = renderToStaticMarkup(React.createElement(Component, { meals: [{ id: 'sunday', date: '2026-10-25', mealType: 'lunch', status: 'Consumed' }] }));
+    assert.match(html, /No service on Sundays/);
+    assert.match(html, /Earlier charge needs credit review/);
+    assert.doesNotMatch(html, />Consumed</);
+    const monday = renderToStaticMarkup(React.createElement(Component, { meals: [{ id: 'monday', date: '2026-10-26', mealType: 'lunch', status: 'Consumed' }] }));
+    assert.match(monday, />Consumed</);
+  }
   console.log('Dashboard rendering checks passed: backend meal balances and review-required state.');
 } finally { await server.close(); }

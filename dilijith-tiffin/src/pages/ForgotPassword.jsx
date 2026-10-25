@@ -24,8 +24,6 @@ export default function ForgotPassword() {
       <button disabled={busy} className="rounded-xl bg-brand p-3 font-bold text-white disabled:opacity-50">{busy ? 'Requesting...' : 'Request reset link'}</button>
       {message && <p role="status">{message}</p>}{error && <p role="alert" className="text-danger">{error}</p>}
     </form>
-    <p className="mt-5">No verified email or no message received? Contact the service team through your established support contact to verify your identity. Never share your password.</p>
-    <Link className="mt-3 block font-bold underline" to="/reset-password">Start assisted recovery</Link>
     <Link className="mt-3 block underline" to="/login">Back to login</Link>
   </div></section>;
 }
