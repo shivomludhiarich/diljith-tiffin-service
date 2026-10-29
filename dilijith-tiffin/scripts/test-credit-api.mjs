@@ -183,6 +183,51 @@ try {
   assert.equal((await request(`/admin/subscriptions/${weekendSub}/cancel`, { opId: randomUUID() })).data.ok, true);
   assert.equal((await MealRecord.findById(oldSunday._id)).status, 'Scheduled');
   console.log('Sunday API checks passed: allocation skips Sunday, legacy Sunday mutations rejected, no Sunday deliveries.');
+  // Credit lifetime: no end date, cancellation extends service, Sundays stay off,
+  // and the automatic worker stops exactly at the available credit balance.
+  setTestNow('2026-10-24T08:00:00+05:30');
+  const lifetimeUser = await User.create({ name: 'Lifetime test', phone: '9000000010', password: randomUUID() });
+  const lifetime = await request('/admin/subscriptions/allocate', { userId: String(lifetimeUser._id), durationMonths: 1,
+    startDate: '2026-10-24', mealTypes: ['dinner'], mealAllocations: { dinner: 2 }, opId: randomUUID() });
+  assert.equal(lifetime.status, 201);
+  assert.equal(lifetime.data.subscription.endDate, null);
+  const lifetimeId = lifetime.data.subscription._id;
+  assert.equal((await Subscription.findById(lifetimeId)).endDate, undefined);
+  await Subscription.updateOne({ _id: lifetimeId }, { $set: { endDate: '2026-10-24' } }); // historical field must be ignored
+  const firstDinner = await MealRecord.findOne({ subscription: lifetimeId, date: '2026-10-24' });
+  const cancelPayload = { opId: randomUUID() };
+  assert.equal((await request(`/user/meals/${firstDinner._id}/cancel`, cancelPayload, lifetimeUser)).status, 200);
+  assert.equal((await request(`/user/meals/${firstDinner._id}/cancel`, cancelPayload, lifetimeUser)).status, 200);
+  assert.deepEqual((await MealRecord.find({ subscription: lifetimeId, status: 'Scheduled' }).sort({ date: 1 })).map(r => r.date), ['2026-10-26', '2026-10-27']);
+  assert.equal((await Subscription.findById(lifetimeId)).remainingCredits, 2);
+  const { settleDueMeals } = await import('../server/services/automaticConsumption.js');
+  const { deriveSubStatus } = await import('../server/controllers/adminController.js');
+  await mongoose.connection.db.collection('mealaccountingpolicies').updateOne({ _id: 'automatic-consumption-v1' }, { $set: { activatedAt: new Date('2026-10-24T08:00:00+05:30') } });
+  await settleDueMeals({ userId: lifetimeUser._id, now: new Date('2026-10-25T20:00:00+05:30') });
+  assert.equal((await Subscription.findById(lifetimeId)).remainingCredits, 2);
+  assert.equal(await MealRecord.countDocuments({ subscription: lifetimeId, date: '2026-10-25' }), 0);
+  for (const day of ['26', '27']) await Promise.all([1, 2].map(() => settleDueMeals({ userId: lifetimeUser._id, now: new Date(`2026-10-${day}T19:00:00+05:30`) })));
+  const complete = await Subscription.findById(lifetimeId);
+  assert.equal(complete.remainingCredits, 0);
+  assert.equal(deriveSubStatus(complete, '2026-10-28'), 'Completed');
+  assert.equal(await Ledger.countDocuments({ subscription: lifetimeId, operation: 'consumption' }), 2);
+  await settleDueMeals({ userId: lifetimeUser._id, now: new Date('2026-11-30T20:00:00+05:30') });
+  assert.equal(await MealRecord.countDocuments({ subscription: lifetimeId, status: 'Scheduled' }), 0);
+  assert.equal((await Subscription.findById(lifetimeId)).consumedMeals, 2);
+  // Top up a completed plan. Replaying the same request must not add credits twice.
+  setTestNow('2026-10-28T08:00:00+05:30');
+  const topup = { opId: randomUUID() };
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const response = await request(`/admin/subscriptions/${lifetimeId}/renew`, topup);
+    assert.equal(response.status, 200, JSON.stringify(response));
+    assert.equal(response.data.subscription.balances.dinner.remaining, 30);
+    assert.equal(response.data.subscription.status, 'Active');
+    assert.equal(response.data.subscription.endDate, null);
+  }
+  const topupRows = await MealRecord.find({ subscription: lifetimeId, status: 'Scheduled' }).sort({ date: 1 });
+  assert.equal(topupRows.length, 30);
+  assert.ok(topupRows.at(-1).date > '2026-11-27'); // 30 service days extend past a calendar month
+  console.log('Credit lifetime passed: legacy end date ignored, cancellation replacement, Sunday skipped, concurrent exact exhaustion, no overspend, idempotent top-up, service beyond a calendar month.');
   console.log('Credit API/database tests passed: allocations, ownership, retries, concurrency, no overspend, renewal carry-forward, ledger reconciliation, uniqueness, legacy protection, authoritative dashboard.');
 } finally {
   if (server) await new Promise(resolve => server.close(resolve));

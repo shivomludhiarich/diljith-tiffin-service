@@ -94,7 +94,7 @@ npm run test:integration
 When you open **MongoDB Compass** and connect to your database (`dilijith_tiffin`), you will see the following collections:
 
 1. **`users`**: User records with uniquely indexed emails, bcrypt-hashed passwords, and roles (`admin` / `user`).
-2. **`subscriptions`**: Independent meal allocations tracking `mealTypes` (breakfast, lunch, dinner), `allocatedMeals`, `consumedMeals`, `approvedAdjustments`, start/end dates, and status.
+2. **`subscriptions`**: Independent meal allocations tracking `mealTypes` (breakfast, lunch, dinner), `allocatedMeals`, `consumedMeals`, `approvedAdjustments`, a start date, and a credit-based status. Subscriptions have no expiry date and complete only when all meal credits are used.
 3. **`mealrecords`**: Scheduled, Consumed, and Cancelled meal records with compound uniqueness per subscription/date/meal.
 4. **`creditadjustments`**: Auditable credit adjustments (+/- credits with reasons).
 5. **`activities`**: Persistent audit log of allocations, renewals, cancellations, and meal activity.

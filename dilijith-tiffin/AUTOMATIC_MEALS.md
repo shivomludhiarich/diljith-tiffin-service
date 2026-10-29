@@ -93,3 +93,28 @@ Sunday history entries are displayed as No service on Sundays. An older stored
 Consumed record is flagged for credit review in customer and admin history;
 this presentation fix does not refund or erase historical ledger charges.
 The scheduler and cancellation/consumption endpoints continue to skip Sundays.
+
+## Credit-based subscription lifetime
+
+Subscriptions have no calendar expiry. Historical endDate fields are retained
+for compatibility but ignored by service eligibility, booking, and consumption.
+New allocations do not store an endDate. Completed means the total remaining
+meal balance is zero; Cancelled remains an explicit administrator action.
+
+Booking reservations cover unused credits on successive Monday-Saturday service
+days. A timely cancellation creates a later reservation without spending or
+refunding a credit. Reconciliation fills missing reservations for older plans
+past their old end date; it does not invent past deliveries or backdate newly
+created bookings. Credit additions fill the schedule, and negative adjustments
+remove only excess future reservations whose cutoffs have not passed. Due
+records without sufficient credit remain visible for accounting review.
+
+Renewal is a credit top-up at any time for a non-cancelled subscription: the
+existing package size adds 30 credits per month-unit per included meal type.
+Unused credits stay on the same subscription. Package month labels determine
+quantity/pricing only, not expiry. Other active allocations for the same meal
+type still require explicit replacement or prevent a conflicting top-up.
+
+The credit API tests cover no expiry, old date compatibility, cancellation
+rescheduling, Sunday exclusion, exact exhaustion under concurrent cron runs,
+and idempotent top-ups. No live data migration is required or performed.

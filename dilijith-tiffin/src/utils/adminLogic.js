@@ -7,7 +7,7 @@ import { MEAL_KEYS } from './pricing.js';
 
 export const EXPIRING_DAYS = 7;
 export const DURATIONS = [1, 3, 6, 12]; // Must match server/controllers/adminController.js DURATIONS
-export const SUB_STATUS = { ACTIVE: 'Active', EXPIRING: 'Expiring soon', EXPIRED: 'Expired', CANCELLED: 'Cancelled' };
+export const SUB_STATUS = { ACTIVE: 'Active', EXPIRING: 'Expiring soon', EXPIRED: 'Completed', COMPLETED: 'Completed', CANCELLED: 'Cancelled' };
 export const MEAL_STATUS = { SCHEDULED: 'Scheduled', CANCELLED: 'Cancelled', CONSUMED: 'Consumed', MISSED: 'Missed' };
 export const NO_SUB = 'No subscription';
 
@@ -21,15 +21,15 @@ export const mealsLabel = (types) => MEAL_KEYS.filter((k) => types.includes(k)).
 // ---------- status ----------
 export function subscriptionStatus(sub, today) {
   if (sub.status === 'Cancelled') return SUB_STATUS.CANCELLED;
-  if (sub.endDate < today) return SUB_STATUS.EXPIRED;
-  if (diffDays(sub.endDate, today) <= EXPIRING_DAYS) return SUB_STATUS.EXPIRING;
+  const remaining = sub.credit?.remaining ?? sub.remainingCredits ??
+    (sub.accountingVersion === 2 && sub.mealCredits ? sub.mealTypes.reduce((n, t) => {
+      const c = sub.mealCredits[t]; return n + (c ? c.allocated + c.adjustments - c.consumed : NaN);
+    }, 0) : sub.allocatedMeals + (sub.approvedAdjustments || 0) - (sub.consumedMeals || 0));
+  if (remaining === 0) return SUB_STATUS.COMPLETED;
   return SUB_STATUS.ACTIVE;
 }
 export const isLive = (status) => status === SUB_STATUS.ACTIVE || status === SUB_STATUS.EXPIRING;
-export const isRenewable = (sub, today) => {
-  const s = subscriptionStatus(sub, today);
-  return s === SUB_STATUS.EXPIRING || s === SUB_STATUS.EXPIRED;
-};
+export const isRenewable = sub => sub.status !== 'Cancelled';
 export const isCancellable = (sub, today) => isLive(subscriptionStatus(sub, today));
 
 // ---------- credits ----------
@@ -112,7 +112,8 @@ export function todaysPrep(state, today) {
 }
 
 export function dashboardMetrics(state, today) {
-  const statuses = state.subscriptions.map((s) => subscriptionStatus(s, today));
+  const credits = creditMap(state);
+  const statuses = state.subscriptions.map((s) => subscriptionStatus({ ...s, credit: credits[s.id] }, today));
   const prep = todaysPrep(state, today);
   return {
     totalUsers: state.users.filter((u) => u.role !== 'admin').length,
@@ -149,7 +150,7 @@ export function scheduleMeals(sub, fromDate, cap) {
   const out = [];
   const types = MEAL_KEYS.filter((m) => sub.mealTypes.includes(m));
   const start = fromDate > sub.startDate ? fromDate : sub.startDate;
-  for (let d = start; d <= sub.endDate && out.length < cap; d = addDays(d, 1)) {
+  for (let d = start; out.length < cap; d = addDays(d, 1)) {
     if (!isServiceDay(d)) continue;
     for (const mealType of types) {
       if (out.length >= cap) break;
@@ -224,7 +225,7 @@ export function allocateSubscription(state, input, { today, nowIso }) {
     durationMonths: months,
     mealTypes: meals,
     startDate: input.startDate,
-    endDate: endDateFor(input.startDate, months),
+    endDate: null,
     allocatedMeals: allocated,
     status: 'Active',
     createdAt: nowIso,
@@ -262,10 +263,10 @@ export function allocateSubscription(state, input, { today, nowIso }) {
 }
 
 export function previewRenewal(sub, today, daysForMonths) {
-  const base = sub.endDate >= today ? addDays(sub.endDate, 1) : today;
+  const base = sub.startDate > today ? sub.startDate : today;
   return {
     periodStart: base,
-    newEndDate: endDateFor(base, sub.durationMonths),
+    newEndDate: null,
     creditsAdded: defaultEntitlement(sub.durationMonths, sub.mealTypes, daysForMonths),
   };
 }
@@ -273,7 +274,7 @@ export function previewRenewal(sub, today, daysForMonths) {
 export function renewSubscription(state, subId, { today, nowIso, daysForMonths }) {
   const sub = state.subscriptions.find((s) => s.id === subId);
   if (!sub) return fail({ form: 'Subscription not found.' });
-  if (!isRenewable(sub, today)) return fail({ form: 'Only expiring or expired subscriptions can be renewed.' });
+  if (!isRenewable(sub, today)) return fail({ form: 'Cancelled subscriptions cannot be renewed.' });
   const user = state.users.find((u) => u.id === sub.userId);
   const { periodStart, newEndDate, creditsAdded } = previewRenewal(sub, today, daysForMonths);
 
@@ -294,7 +295,7 @@ export function renewSubscription(state, subId, { today, nowIso, daysForMonths }
   next = { ...next, mealRecords: [...next.mealRecords, ...scheduleMeals(renewed, periodStart, Math.max(0, remaining - alreadyScheduled))] };
   next = addActivity(next, {
     type: 'renewed', label: 'Subscription renewed', userId: sub.userId, userName: user?.name ?? 'Unknown user', subscriptionId: sub.id,
-    detail: `${sub.id} · now ends ${newEndDate} · +${creditsAdded} meals`,
+    detail: `${sub.id} · no expiry · +${creditsAdded} meals`,
   }, nowIso);
   return { ok: true, state: next, subscription: renewed };
 }
@@ -348,7 +349,7 @@ export function adjustCredits(state, input, { today, nowIso }) {
 export function isValidAdminState(s) {
   return !!s && ['users', 'subscriptions', 'mealRecords', 'adjustments', 'activity'].every((k) => Array.isArray(s[k])) &&
     s.users.every((u) => u && u.id && u.name) &&
-    s.subscriptions.every((x) => x && x.id && x.userId && Array.isArray(x.mealTypes) && isValidDateStr(x.startDate) && isValidDateStr(x.endDate) && Number.isFinite(x.allocatedMeals)) &&
+    s.subscriptions.every((x) => x && x.id && x.userId && Array.isArray(x.mealTypes) && isValidDateStr(x.startDate) && (x.endDate == null || isValidDateStr(x.endDate)) && Number.isFinite(x.allocatedMeals)) &&
     s.mealRecords.every((m) => m && m.id && m.subscriptionId && isValidDateStr(m.date)) &&
     s.adjustments.every((a) => a && a.id && a.subscriptionId && Number.isFinite(a.amount)) &&
     s.activity.every((a) => a && a.id && a.createdAt);

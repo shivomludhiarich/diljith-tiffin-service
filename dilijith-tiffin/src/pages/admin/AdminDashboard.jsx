@@ -118,7 +118,7 @@ export default function AdminDashboard() {
       <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <StatCard label="Total users"            value={metrics?.totalUsers            ?? state.users.filter(u => u.role !== 'admin').length} to="/admin/users" />
         <StatCard label="Active subscriptions"   value={metrics?.activeSubscriptions   ?? '—'} tone="green" to="/admin/subscriptions?status=active"
-          hint={metrics ? `${metrics.expiringSoon} expiring soon` : ''} />
+          hint={metrics ? `${metrics.completed || 0} completed` : ''} />
         <StatCard label="Meals scheduled today"  value={metrics?.mealsToday            ?? '—'} hint="Excludes cancelled" />
         <StatCard label="Meals cancelled today"  value={metrics?.mealsCancelledToday   ?? '—'} />
         <StatCard label="Missing addresses"      value={metrics?.usersWithoutAddress   ?? '—'} tone="orange"

@@ -9,7 +9,6 @@ import {
   DURATIONS, defaultEntitlement, durationLabel, mealLabel, mealsLabel, subscriptionStatus, uid,
 } from '../../utils/adminLogic';
 import { MEAL_KEYS, calculatePlan, formatINR } from '../../utils/pricing';
-import { endDateFor, formatDate, isValidDateStr } from '../../utils/dates';
 
 const Err = ({ id, children }) => (children ? <p id={id} role="alert" className="mt-1 text-sm text-danger">{children}</p> : null);
 
@@ -34,7 +33,6 @@ export default function AllocateSubscriptionModal({ presetUserId = '', onClose }
 
   const durationCfg = pricing.durations.find((d) => d.months === form.durationMonths);
   const plan = durationCfg ? calculatePlan(pricing, durationCfg.id, form.mealTypes) : null;
-  const endDate = isValidDateStr(form.startDate) ? endDateFor(form.startDate, form.durationMonths) : null;
 
   const toggleMeal = (key) => {
     set({ mealTypes: [key] });
@@ -113,7 +111,7 @@ export default function AllocateSubscriptionModal({ presetUserId = '', onClose }
                 <li key={sub.id} className="flex flex-wrap items-center gap-x-3 gap-y-1">
                   <span className="font-semibold">{sub.id}</span>
                   <StatusBadge status={subscriptionStatus(sub, today)} />
-                  <span className="text-muted">{mealsLabel(sub.mealTypes)} · ends {formatDate(sub.endDate)}</span>
+                  <span className="text-muted">{mealsLabel(sub.mealTypes)} · valid until credits are used</span>
                   <span className="text-muted">· {credits[sub.id]?.remaining ?? 0} meals remaining</span>
                   <span className="font-medium text-amber">conflicts: {overlappingMeals.map(mealLabel).join(', ')}</span>
                 </li>
@@ -134,7 +132,7 @@ export default function AllocateSubscriptionModal({ presetUserId = '', onClose }
         )}
 
         <fieldset>
-          <legend className="mb-1 text-sm font-semibold">Duration</legend>
+          <legend className="mb-1 text-sm font-semibold">Credit package</legend>
           <div className="grid grid-cols-3 gap-2">
             {DURATIONS.map((m) => (
               <label key={m} className={`flex h-11 cursor-pointer items-center justify-center rounded-lg border text-sm font-bold ${form.durationMonths === m ? 'border-brand bg-white ring-1 ring-brand' : 'border-line bg-bg2'}`}>
@@ -143,6 +141,7 @@ export default function AllocateSubscriptionModal({ presetUserId = '', onClose }
               </label>
             ))}
           </div>
+          <p className="mt-2 text-xs text-muted">Package size sets the suggested number of credits, not an expiry date.</p>
           <Err>{errors.durationMonths}</Err>
         </fieldset>
 
@@ -167,7 +166,7 @@ export default function AllocateSubscriptionModal({ presetUserId = '', onClose }
             <label htmlFor="alloc-start" className="mb-1 block text-sm font-semibold">Start date</label>
             <input id="alloc-start" type="date" className="field" value={form.startDate} onChange={(e) => set({ startDate: e.target.value })} />
             <Err>{errors.startDate}</Err>
-            <p className="mt-1 text-xs text-muted">Ends on {endDate ? formatDate(endDate) : '-'}</p>
+            <p className="mt-1 text-xs text-muted">Valid until all meal credits are used</p>
           </div>
           <div>
             <label htmlFor="alloc-meals" className="mb-1 block text-sm font-semibold">{mealLabel(form.mealTypes[0])} credits</label>

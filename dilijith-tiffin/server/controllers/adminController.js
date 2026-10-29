@@ -19,9 +19,7 @@ const MEAL_KEYS = ['breakfast', 'lunch', 'dinner'];
 /** Helper to derive subscription status relative to today */
 export function deriveSubStatus(sub, today) {
   if (sub.status === 'Cancelled') return 'Cancelled';
-  if (sub.endDate < today) return 'Expired';
-  const expiringCutoff = addDays(today, 7);
-  if (sub.endDate <= expiringCutoff) return 'Expiring soon';
+  if (totals(sub)?.remaining === 0) return 'Completed';
   return 'Active';
 }
 
@@ -41,7 +39,7 @@ export function formatSub(s, today) {
     mealTypes: s.mealTypes,
     durationMonths: s.durationMonths,
     startDate: s.startDate,
-    endDate: s.endDate,
+    endDate: null,
     allocatedMeals: s.allocatedMeals,
     consumedMeals: s.consumedMeals,
     approvedAdjustments: s.approvedAdjustments,
@@ -253,11 +251,11 @@ export async function getDashboardMetrics(req, res) {
     ]);
 
     let activeCount = 0;
-    let expiringSoonCount = 0;
+    let completedCount = 0;
     for (const s of allSubs) {
       const st = deriveSubStatus(s, today);
       if (st === 'Active' || st === 'Expiring soon') activeCount++;
-      if (st === 'Expiring soon') expiringSoonCount++;
+      if (st === 'Completed') completedCount++;
     }
 
     // Prep counts by meal type for today
@@ -283,7 +281,7 @@ export async function getDashboardMetrics(req, res) {
         activeSubscriptions: activeCount,
         mealsToday: mealsTodayScheduled,
         mealsCancelledToday: mealsTodayCancelled,
-        expiringSoon: expiringSoonCount,
+        completed: completedCount,
         usersWithoutAddress,
         prep,
       },

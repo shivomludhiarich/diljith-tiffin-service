@@ -30,7 +30,7 @@ test('stats are derived from running subscriptions only (u2: 22 consumed, 38 lef
   assert.ok(s.stats.breakdownByMeal.dinner !== null, 'Dinner credits should be present for u2');
   assert.equal(s.stats.breakdownByMeal.breakfast, null, 'Breakfast not allocated for u2');
   assert.equal(s.overallStatus, 'Active');
-  assert.equal(s.nearestExpiry, s.running[0].sub.endDate);
+  assert.equal(s.nearestExpiry, null);
   assert.equal(s.running[0].percentUsed, Math.round((22 / 60) * 100));
 });
 
@@ -46,22 +46,18 @@ test('stats match the admin portal numbers for every user', () => {
   assert.equal(totalActive, dashboardMetrics(state, TODAY).activeSubscriptions);
 });
 
-test('expiring-soon plan is flagged; expired and cancelled plans are history, not active', () => {
+test('old end dates do not expire unused credits; cancelled plans stay inactive', () => {
   const state = fresh();
-  const rohan = userSummary(state, 'u3', TODAY);
-  assert.equal(rohan.overallStatus, 'Expiring soon');
-  assert.equal(rohan.expiring.length, 1);
-  const meera = userSummary(state, 'u4', TODAY); // only an expired plan
-  assert.equal(meera.running.length, 0);
-  assert.equal(meera.past.length, 1);
-  assert.equal(meera.stats.remaining, 0);
-  assert.equal(meera.stats.consumed, 0);
-  assert.equal(meera.stats.cancelled, 0);
-  assert.equal(meera.stats.activeSubscriptions, 0);
-  assert.deepEqual(meera.stats.breakdownByMeal, { breakfast: null, lunch: null, dinner: null });
-  assert.equal(meera.overallStatus, 'No subscription');
-  const kabir = userSummary(state, 'u5', TODAY); // cancelled
-  assert.equal(kabir.stats.activeSubscriptions, 0);
+  for (const id of ['u3', 'u4']) {
+    const summary = userSummary(state, id, TODAY);
+    assert.equal(summary.overallStatus, 'Active');
+    assert.equal(summary.expiring.length, 0);
+    assert.equal(summary.nearestExpiry, null);
+    assert.equal(summary.running.length, 1);
+    assert.ok(summary.stats.remaining > 0);
+  }
+  assert.equal(userSummary(state, 'u6', TODAY).past[0].status, 'Completed');
+  assert.equal(userSummary(state, 'u5', TODAY).stats.activeSubscriptions, 0);
 });
 
 test('a user with no subscription gets safe empty data', () => {

@@ -7,7 +7,7 @@ const renewalSchema = new mongoose.Schema(
     durationMonths: { type: Number, required: true },
     addedMeals: { type: Number, required: true },
     fromDate: { type: String, required: true },
-    toDate: { type: String, required: true },
+    toDate: { type: String },
   },
   { _id: false }
 );
@@ -56,8 +56,7 @@ const subscriptionSchema = new mongoose.Schema(
       match: [/^\d{4}-\d{2}-\d{2}$/, 'Start date must be in YYYY-MM-DD format'],
     },
     endDate: {
-      type: String, // YYYY-MM-DD
-      required: true,
+      type: String, // Legacy history only; no longer controls service.
       match: [/^\d{4}-\d{2}-\d{2}$/, 'End date must be in YYYY-MM-DD format'],
     },
     allocatedMeals: {

@@ -14,8 +14,8 @@ const Stat = ({ label, value, strong }) => (
 
 export default function SubscriptionCard({ item, customerName, past = false }) {
   const { sub, status, credit, percentUsed } = item;
-  const showRenew = status === 'Expiring soon' || status === 'Expired';
-  const warn = status === 'Expiring soon';
+  const showRenew = status === 'Completed';
+  const warn = false;
 
   return (
     <article className={`rounded-xl border bg-white p-5 ${warn ? 'border-accent' : 'border-line'} ${past ? 'opacity-80' : ''}`}>
@@ -33,8 +33,8 @@ export default function SubscriptionCard({ item, customerName, past = false }) {
           <dd className="text-sm font-semibold">{formatDate(sub.startDate)}</dd>
         </div>
         <div>
-          <dt className="text-xs font-semibold text-muted">{past ? 'Ended' : 'Expires'}</dt>
-          <dd className={`text-sm font-semibold ${warn ? 'text-amber' : ''}`}>{formatDate(sub.endDate)}</dd>
+          <dt className="text-xs font-semibold text-muted">Validity</dt>
+          <dd className={`text-sm font-semibold ${warn ? 'text-amber' : ''}`}>Until credits are used</dd>
         </div>
         <Stat label="Allocated credits" value={credit.entitlement} />
         <Stat label="Consumed" value={credit.consumed} />
@@ -54,7 +54,7 @@ export default function SubscriptionCard({ item, customerName, past = false }) {
       {showRenew && (
         <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-line pt-4">
           <p className={`text-sm ${warn ? 'text-amber' : 'text-muted'}`}>
-            {warn ? `Expires on ${formatDate(sub.endDate)}.` : `This plan ended on ${formatDate(sub.endDate)}.`} Renewals are handled on WhatsApp.
+            All meal credits have been used. Renewals are handled on WhatsApp.
           </p>
           <WhatsAppButton label="Renew via WhatsApp" message={renewalMessage({ name: customerName, plan: planDetails(sub) })} variant="primary" />
         </div>

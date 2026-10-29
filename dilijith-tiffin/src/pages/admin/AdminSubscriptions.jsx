@@ -15,8 +15,8 @@ import { durationLabel, isCancellable, isRenewable, mealsLabel, subscriptionStat
 import { formatDate } from '../../utils/dates';
 
 const ALL = 'All statuses';
-const STATUS_OPTIONS = [ALL, 'Active', 'Expiring soon', 'Expired', 'Cancelled'];
-const FROM_URL = { active: 'Active', expiring: 'Expiring soon', expired: 'Expired', cancelled: 'Cancelled' };
+const STATUS_OPTIONS = [ALL, 'Active', 'Completed', 'Cancelled'];
+const FROM_URL = { active: 'Active', completed: 'Completed', cancelled: 'Cancelled' };
 
 export default function AdminSubscriptions() {
   const { state, today, credits } = useAdminData();
@@ -49,7 +49,6 @@ export default function AdminSubscriptions() {
     { key: 'duration', label: 'Duration', render: (r) => durationLabel(r.sub.durationMonths) },
     { key: 'meals', label: 'Meal types', render: (r) => mealsLabel(r.sub.mealTypes) },
     { key: 'start', label: 'Start date', render: (r) => <span className="whitespace-nowrap">{formatDate(r.sub.startDate)}</span> },
-    { key: 'end', label: 'End date', render: (r) => <span className="whitespace-nowrap">{formatDate(r.sub.endDate)}</span> },
     { key: 'allocated', label: 'Allocated meals', render: (r) => (
       <>{r.credit.entitlement}{r.credit.adjustments !== 0 && <span className="block text-xs text-muted">incl. {r.credit.adjustments > 0 ? '+' : ''}{r.credit.adjustments} adjusted</span>}</>) },
     { key: 'consumed', label: 'Meals consumed', render: (r) => r.credit.consumed },
@@ -68,7 +67,7 @@ export default function AdminSubscriptions() {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl sm:text-4xl">Subscriptions</h1>
-          <p className="mt-1 text-muted">Every subscription ever allocated. Cancelled and expired ones are kept for history.</p>
+          <p className="mt-1 text-muted">Every subscription ever allocated. Cancelled and completed ones are kept for history.</p>
         </div>
         <Button onClick={() => setAllocating(true)}>Allocate subscription</Button>
       </div>

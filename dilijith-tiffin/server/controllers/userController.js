@@ -30,7 +30,7 @@ export async function getUserDashboard(req, res) {
           mealTypes: s.mealTypes,
           durationMonths: s.durationMonths,
           startDate: s.startDate,
-          endDate: s.endDate,
+          endDate: null,
           allocatedMeals: s.allocatedMeals,
           consumedMeals: s.consumedMeals,
           approvedAdjustments: s.approvedAdjustments,
@@ -54,7 +54,8 @@ export async function getUserDashboard(req, res) {
     // Independent Per-Meal-Type breakdown
     const mealCredits = { breakfast: null, lunch: null, dinner: null };
     for (const mealType of MEAL_KEYS) {
-      const covering = running.filter((x) => x.sub.mealTypes.includes(mealType));
+      let covering = running.filter((x) => x.sub.mealTypes.includes(mealType));
+      if (!covering.length) covering = all.filter(x => x.status === 'Completed' && x.sub.mealTypes.includes(mealType)).slice(0, 1);
       if (!covering.length) continue;
 
       if (covering.some(x => x.sub.requiresCreditReview)) {
@@ -82,7 +83,7 @@ export async function getUserDashboard(req, res) {
       };
     }
 
-    const expiries = running.map((x) => x.sub.endDate).sort();
+    const expiries = [];
     const expiring = running.filter((x) => x.status === 'Expiring soon');
     let overallStatus = 'No subscription';
     if (running.length) overallStatus = expiring.length ? 'Expiring soon' : 'Active';
@@ -124,7 +125,6 @@ export async function getTodaysMeals(req, res) {
       user: userId,
       status: { $ne: 'Cancelled' },
       startDate: { $lte: today },
-      endDate: { $gte: today },
     });
 
     const liveIds = new Set(subs.map((s) => s._id.toString()));

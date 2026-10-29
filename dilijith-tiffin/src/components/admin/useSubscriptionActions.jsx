@@ -46,11 +46,11 @@ export default function useSubscriptionActions() {
         {type === 'renew' ? (
           <>
             <p>{userName} · {durationLabel(sub.durationMonths)} · {mealsLabel(sub.mealTypes)}</p>
-            <p>The subscription will run until <strong className="text-ink">{formatDate(renewal.newEndDate)}</strong> and <strong className="text-ink">{renewal.creditsAdded}</strong> meal credits will be added. Unused credits carry over.</p>
+            <p>There is no expiry date. <strong className="text-ink">{renewal.creditsAdded}</strong> meal credits will be added. Unused credits carry over.</p>
           </>
         ) : (
           <>
-            <p>{userName} · ends {formatDate(sub.endDate)}</p>
+            <p>{userName} · valid until credits are used</p>
             <p>Their future scheduled meals will be cancelled. The subscription and its meal history stay on record. This cannot be undone here.</p>
           </>
         )}

@@ -37,5 +37,12 @@ try {
     const monday = renderToStaticMarkup(React.createElement(Component, { meals: [{ id: 'monday', date: '2026-10-26', mealType: 'lunch', status: 'Consumed' }] }));
     assert.match(monday, />Consumed</);
   }
+  const { default: SubscriptionCard } = await server.ssrLoadModule('/src/components/dashboard/SubscriptionCard.jsx');
+  const card = renderToStaticMarkup(React.createElement(SubscriptionCard, { item: {
+    sub: { id: 'no-expiry', durationMonths: 1, mealTypes: ['lunch'], startDate: '2026-10-01', endDate: '2026-10-31' },
+    status: 'Active', credit: { entitlement: 30, consumed: 1, remaining: 29 }, percentUsed: 3,
+  }, customerName: 'Test' }));
+  assert.match(card, /Until credits are used/);
+  assert.doesNotMatch(card, /Expires|31 Oct 2026|End date/);
   console.log('Dashboard rendering checks passed: backend meal balances and review-required state.');
 } finally { await server.close(); }

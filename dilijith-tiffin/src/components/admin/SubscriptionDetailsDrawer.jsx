@@ -28,7 +28,7 @@ export default function SubscriptionDetailsDrawer({ subId, onClose, onOpenUser, 
         <Field label="Plan">{durationLabel(sub.durationMonths)}</Field>
         <Field label="Meal types">{mealsLabel(sub.mealTypes)}</Field>
         <Field label="Start date">{formatDate(sub.startDate)}</Field>
-        <Field label="End date">{formatDate(sub.endDate)}</Field>
+        <Field label="Validity">Until all meal credits are used</Field>
         <Field label="Created">{formatDateTime(sub.createdAt)}</Field>
         <Field label="Demo price">{sub.demoPrice ? `₹${sub.demoPrice.toLocaleString('en-IN')}` : null}</Field>
         {sub.cancelledAt && <Field label="Cancelled">{formatDateTime(sub.cancelledAt)}{sub.cancelReason ? ` · ${sub.cancelReason}` : ''}</Field>}
@@ -43,7 +43,7 @@ export default function SubscriptionDetailsDrawer({ subId, onClose, onOpenUser, 
           <ul className="divide-y divide-line rounded-xl border border-line bg-white text-sm">
             {[...sub.renewals].reverse().map((r) => (
               <li key={r.id} className="px-3 py-2">
-                {formatDateTime(r.renewedAt)} · {formatDate(r.previousEndDate)} to {formatDate(r.newEndDate)} · +{r.creditsAdded} meals
+                {formatDateTime(r.renewedAt)} · +{r.creditsAdded} meals
               </li>
             ))}
           </ul>

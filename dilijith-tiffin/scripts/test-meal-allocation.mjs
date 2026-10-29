@@ -308,8 +308,8 @@ test('15a. Renewing a subscription still works after additive allocation', () =>
   // The original lunch subscription SUB-1001 should still be renewable when it expires
   // (it's active now, so not renewable yet — verify that's still the case)
   const renewAttempt = renewSubscription(r1.state, 'SUB-1001', ctx);
-  assert.equal(renewAttempt.ok, false); // Active subs are not renewable
-  assert.ok(renewAttempt.errors.form, 'Should return error for renewing an active sub');
+  assert.equal(renewAttempt.ok, true); // Top-ups are available while active
+  assert.equal(renewAttempt.subscription.endDate, null);
 });
 
 test('15b. Cancelling a subscription still works after additive allocation', () => {

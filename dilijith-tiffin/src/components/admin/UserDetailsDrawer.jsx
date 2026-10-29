@@ -116,7 +116,7 @@ export default function UserDetailsDrawer({ userId, onClose }) {
                       </div>
                       <StatusBadge status={status} />
                     </div>
-                    <p className="mt-1 text-xs text-muted">{formatDate(sub.startDate)} – {formatDate(sub.endDate)}</p>
+                    <p className="mt-1 text-xs text-muted">Starts {formatDate(sub.startDate)} - no expiry</p>
                     {credit && (
                       <dl className="mt-2 grid grid-cols-3 gap-2 text-center text-xs">
                         <div>
@@ -156,7 +156,7 @@ export default function UserDetailsDrawer({ userId, onClose }) {
                 <li key={s.id} className="flex items-center justify-between gap-3 px-3 py-2">
                   <span>
                     <span className="font-semibold">{s.id}</span> · {durationLabel(s.durationMonths)} · {mealsLabel(s.mealTypes)}
-                    <span className="block text-xs text-muted">{formatDate(s.startDate)} to {formatDate(s.endDate)}{s.cancelReason ? ` · ${s.cancelReason}` : ''}</span>
+                    <span className="block text-xs text-muted">Starts {formatDate(s.startDate)} - no expiry{s.cancelReason ? ` · ${s.cancelReason}` : ''}</span>
                   </span>
                   <StatusBadge status={subscriptionStatus(s, today)} />
                 </li>

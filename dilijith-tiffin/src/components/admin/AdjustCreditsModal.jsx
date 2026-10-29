@@ -74,7 +74,7 @@ export default function AdjustCreditsModal({ subscriptionId, onClose }) {
   return (
     <Modal open onClose={onClose} title="Adjust meal credits">
       <p className="mb-1 text-sm font-semibold">{user.name} · {sub.id}</p>
-      <p className="mb-4 text-xs text-muted">Meal types: {sub.mealTypes.join(', ')} · expires {sub.endDate}</p>
+      <p className="mb-4 text-xs text-muted">Meal types: {sub.mealTypes.join(', ')} · valid until credits are used</p>
       <label className="block text-sm">Meal type<select className="field" value={selected} disabled={step !== "form"} onChange={e => setMealType(e.target.value)}>{sub.mealTypes.map(t => <option key={t} value={t}>{t}</option>)}</select></label>
       <dl className="rounded-lg bg-white p-4 text-sm">
         <Row label="Current entitlement" value={`${c.entitlement} meals`} />

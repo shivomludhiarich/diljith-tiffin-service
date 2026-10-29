@@ -28,6 +28,8 @@ try {
     const due = await make('2030-01-02');
     const cancelled = await make('2030-01-03', 'Cancelled');
     const future = await make('2030-01-04');
+    // Reserve the other credits so this cutoff test does not also test schedule filling.
+    for (const date of ['2030-02-01', '2030-02-02', '2030-02-04']) await make(date);
     const cutoff = cutoffFor(due.date, mealType);
     await settleDueMeals({ now: new Date(cutoff.getTime() - 1) });
     assert.equal((await MealRecord.findById(due._id)).status, 'Scheduled');

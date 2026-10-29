@@ -114,10 +114,8 @@ export default function UserDashboard() {
   if (loadError) return <div className="container-x py-10" role="alert">Balances could not be refreshed: {loadError} <button onClick={refresh}>Try again</button></div>;
   if (!data) return <p className="container-x py-10" role="status">Loading meal balances?</p>;
   const { summary, meals, recent, tomorrow } = data;
-  const { running, past, stats, mealCredits, nearestExpiry, overallStatus, expiring } = summary;
+  const { running, past, stats, mealCredits, overallStatus } = summary;
   const firstName = (user.name || 'there').split(' ')[0];
-  const daysToExpiry = nearestExpiry ? diffDays(nearestExpiry, today) : null;
-  const expiringItem = expiring[0];
   const nothingYet = running.length === 0 && past.length === 0;
 
   // Build a summary line using per-meal balances where available
@@ -158,7 +156,7 @@ export default function UserDashboard() {
             <StatCard label="Meals remaining" value={stats.remaining ?? "Review required"} tone="green" hint="Total remaining across all active plans" />
             <StatCard label="Meals consumed" value={stats.consumed ?? "Review required"} hint="On your active plans" />
             <StatCard label="Meals cancelled" value={stats.cancelled} hint="Cancelled by you in time, credit kept" />
-            <StatCard label="Active subscriptions" value={stats.activeSubscriptions} hint="Expired plans are not counted" />
+            <StatCard label="Active subscriptions" value={stats.activeSubscriptions} hint="Plans with unused credits" />
           </section>
 
           {/* Per-meal credit breakdown — independent balances */}
@@ -171,20 +169,7 @@ export default function UserDashboard() {
             </div>
           </section>
 
-          {nearestExpiry && (
-            <div className={`mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-white px-5 py-3 text-sm ${daysToExpiry <= 7 ? 'border-accent' : 'border-line'}`}>
-              <p>
-                <span className="font-semibold">Next expiry:</span> {formatDate(nearestExpiry)}{' '}
-                <span className={daysToExpiry <= 7 ? 'font-semibold text-amber' : 'text-muted'}>
-                  ({daysToExpiry === 0 ? 'today' : `in ${daysToExpiry} day${daysToExpiry === 1 ? '' : 's'}`})
-                </span>
-              </p>
-              {expiringItem && (
-                <WhatsAppButton label="Renew via WhatsApp" variant="primary"
-                  message={renewalMessage({ name: user.name, plan: planDetails(expiringItem.sub) })} />
-              )}
-            </div>
-          )}
+          <p className="mt-4 text-sm text-muted">Meal credits have no expiry. Sundays and timely cancellations do not use credits.</p>
 
           <section aria-labelledby="today-title" className="mt-10">
             <h2 id="today-title" className="mb-3 text-2xl">Today&apos;s meals</h2>

@@ -37,15 +37,15 @@ test('dashboard metrics are derived from records', () => {
   assert.equal(m.mealsToday, 7);
   assert.equal(m.mealsCancelledToday, 2);
   assert.equal(m.totalUsers, 12); // MOCK_USERS has 12 non-admin users
-  assert.equal(m.activeSubscriptions, 5);
-  assert.equal(m.expiringSoon, 2);
+  assert.equal(m.activeSubscriptions, 6);
+  assert.equal(m.expiringSoon, 0);
 });
 
-test('statuses: expired and cancelled are never active', () => {
+test('statuses ignore historical end dates; cancellation remains final', () => {
   const s = fresh();
   assert.equal(subscriptionStatus(sub(s, 'SUB-1002'), TODAY), 'Active');
-  assert.equal(subscriptionStatus(sub(s, 'SUB-1003'), TODAY), 'Expiring soon');
-  assert.equal(subscriptionStatus(sub(s, 'SUB-1004'), TODAY), 'Expired');
+  assert.equal(subscriptionStatus(sub(s, 'SUB-1003'), TODAY), 'Active');
+  assert.equal(subscriptionStatus(sub(s, 'SUB-1004'), TODAY), 'Active');
   assert.equal(subscriptionStatus(sub(s, 'SUB-1005'), TODAY), 'Cancelled');
 });
 
@@ -86,7 +86,7 @@ test('adjustment validation', () => {
   assert.ok(bad('5', '').errors.reason);
   assert.ok(bad('-39', 'correction').errors.amount); // below zero
   assert.ok(bad('-38', 'correction').ok);
-  assert.ok(adjustCredits(s, { subscriptionId: 'SUB-1004', amount: '5', reason: 'expired sub' }, ctx).errors.form);
+  assert.ok(adjustCredits(s, { subscriptionId: 'SUB-1004', amount: '5', reason: 'old end date' }, ctx).ok);
   assert.ok(validateAdjustment(null, { amount: '3', reason: 'abc' }).errors.amount === undefined);
 });
 
@@ -95,14 +95,14 @@ test('allocate 1 month lunch+dinner for a user with no plan', () => {
   const r = allocateSubscription(s, { userId: 'u7', durationMonths: 1, mealTypes: ['dinner', 'lunch'], startDate: TODAY, allocatedMeals: 60 }, ctx);
   assert.ok(r.ok);
   assert.equal(r.subscription.id, 'SUB-1008');
-  assert.equal(r.subscription.endDate, '2026-11-14');
+  assert.equal(r.subscription.endDate, null);
   assert.deepEqual(r.subscription.mealTypes, ['lunch', 'dinner']);
   assert.equal(r.state.subscriptions.length, s.subscriptions.length + 1);
   assert.equal(currentSubscription(r.state, 'u7', TODAY).id, 'SUB-1008');
   const c = creditMap(r.state)['SUB-1008'];
   assert.deepEqual([c.entitlement, c.consumed, c.remaining], [60, 0, 60]);
   const m = dashboardMetrics(r.state, TODAY);
-  assert.equal(m.activeSubscriptions, 6);
+  assert.equal(m.activeSubscriptions, 7);
   assert.deepEqual(m.prep, { breakfast: 1, lunch: 5, dinner: 3 });
   assert.equal(recentActivity(r.state, 1)[0].label, 'Subscription allocated');
   // then +10 credits on the same user's plan
@@ -135,26 +135,26 @@ test('replacing a live plan needs confirmation and keeps history', () => {
   assert.equal(creditMap(r.state)['SUB-1002'].consumed, 22); // history intact
 });
 
-test('renew an expired plan: new end date, Active again, credits added', () => {
+test('renew a plan with an old end date: no expiry, credits added', () => {
   const s = fresh();
   const r = renewSubscription(s, 'SUB-1004', ctx);
   assert.ok(r.ok);
   const n = sub(r.state, 'SUB-1004');
-  assert.equal(n.endDate, '2027-01-14');
+  assert.equal(n.endDate, null);
   assert.equal(subscriptionStatus(n, TODAY), 'Active');
   assert.equal(n.renewals.length, 1);
   assert.equal(creditMap(r.state)['SUB-1004'].entitlement, 90 + 90);
   assert.equal(r.state.subscriptions.length, s.subscriptions.length);
-  assert.equal(renewSubscription(r.state, 'SUB-1004', ctx).ok, false); // no double renewal
+  assert.equal(renewSubscription(r.state, 'SUB-1004', ctx).ok, true); // no double renewal
 });
 
-test('renew an expiring plan continues from the day after its end date', () => {
+test('renewal adds credits immediately without extending a date', () => {
   const s = fresh();
   const r = renewSubscription(s, 'SUB-1007', ctx);
   assert.ok(r.ok);
-  assert.equal(r.subscription.endDate, '2026-11-17');
+  assert.equal(r.subscription.endDate, null);
   assert.equal(r.state.subscriptions.length, s.subscriptions.length);
-  assert.equal(renewSubscription(s, 'SUB-1002', ctx).ok, false); // healthy plans are not renewable
+  assert.equal(renewSubscription(s, 'SUB-1002', ctx).ok, true); // healthy plans are not renewable
   assert.equal(renewSubscription(s, 'SUB-1005', ctx).ok, false); // cancelled plans are not renewable
 });
 
@@ -167,9 +167,9 @@ test('cancel keeps the record, meal history and consumed count', () => {
   assert.equal(r.state.mealRecords.length, s.mealRecords.length);
   assert.equal(creditMap(r.state)['SUB-1001'].consumed, creditMap(s)['SUB-1001'].consumed);
   assert.equal(r.state.mealRecords.filter((m) => m.subscriptionId === 'SUB-1001' && m.status === 'Scheduled' && m.date >= TODAY).length, 0);
-  assert.equal(dashboardMetrics(r.state, TODAY).activeSubscriptions, 4);
+  assert.equal(dashboardMetrics(r.state, TODAY).activeSubscriptions, 5);
   assert.equal(cancelSubscription(r.state, 'SUB-1001', ctx).ok, false);
-  assert.equal(cancelSubscription(s, 'SUB-1004', ctx).ok, false); // expired, nothing to cancel
+  assert.equal(cancelSubscription(s, 'SUB-1004', ctx).ok, true); // expired, nothing to cancel
 });
 
 test('no scheduled meal is ever double counted as consumed', () => {

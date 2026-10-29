@@ -1,6 +1,7 @@
 const STYLES = {
   Active: 'border-brand/60 text-leaf',
   'Expiring soon': 'border-accent text-amber',
+  Completed: 'border-line text-muted',
   Expired: 'border-line text-muted',
   Cancelled: 'border-danger/50 text-danger',
   'No subscription': 'border-line text-muted',

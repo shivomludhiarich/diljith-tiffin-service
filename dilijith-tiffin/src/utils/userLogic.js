@@ -22,7 +22,7 @@ export function cutoffFor(date, mealType, policy = MEAL_POLICY) {
 }
 
 export const planDetails = (sub) =>
-  `${sub.id}, ${durationLabel(sub.durationMonths)}, ${mealsLabel(sub.mealTypes)} (ends ${formatDate(sub.endDate)})`;
+  `${sub.id}, ${durationLabel(sub.durationMonths)}, ${mealsLabel(sub.mealTypes)} (valid until meal credits are used)`;
 
 /** Subscriptions, stats and expiry info for one user. Expired and cancelled plans are never counted as active. */
 export function userSummary(state, userId, today) {
@@ -33,7 +33,7 @@ export function userSummary(state, userId, today) {
     .map((sub) => {
       const credit = credits[sub.id];
       return {
-        sub, status: subscriptionStatus(sub, today), credit,
+        sub, status: subscriptionStatus({ ...sub, credit }, today), credit,
         percentUsed: credit.entitlement > 0 ? Math.min(100, Math.round((credit.consumed / credit.entitlement) * 100)) : 0,
       };
     });
@@ -42,7 +42,7 @@ export function userSummary(state, userId, today) {
   const runningIds = new Set(running.map((x) => x.sub.id));
   const records = state.mealRecords.filter((m) => runningIds.has(m.subscriptionId));
 
-  const expiries = running.map((x) => x.sub.endDate).sort();
+  const expiries = [];
   const expiring = running.filter((x) => x.status === SUB_STATUS.EXPIRING);
 
   let overallStatus = NO_SUB;

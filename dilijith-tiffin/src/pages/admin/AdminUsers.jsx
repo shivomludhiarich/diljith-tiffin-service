@@ -11,7 +11,7 @@ import AllocateSubscriptionModal from '../../components/admin/AllocateSubscripti
 import { useAdminData } from '../../context/AdminDataContext';
 import { NO_SUB, durationLabel, mealsLabel, userRows } from '../../utils/adminLogic';
 
-const STATUS_OPTIONS = ['All statuses', 'Active', 'Expiring soon', 'Expired', 'Cancelled', NO_SUB, 'Missing address'];
+const STATUS_OPTIONS = ['All statuses', 'Active', 'Completed', 'Cancelled', NO_SUB, 'Missing address'];
 
 export default function AdminUsers() {
   const { state, today, credits } = useAdminData();
